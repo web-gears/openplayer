@@ -357,11 +357,6 @@ class JellyfinClient {
         Communications.makeWebRequest(url, {}, options, callback);
     }
 
-    function onDownloadComplete(
-        responseCode as Number,
-        data as Dictionary?
-    ) as Void {}
-
     function cancelPendingRequests() as Void {
         Communications.cancelAllRequests();
     }

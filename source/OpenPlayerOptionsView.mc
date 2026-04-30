@@ -6,9 +6,14 @@ import Toybox.Communications;
 class OpenPlayerOptionsView extends WatchUi.View {
     private var _options as Array = [];
     private var _selectedIndex as Number = 0;
+    private var _playlistId as String?;
 
     function initialize() {
         View.initialize();
+    }
+
+    function setPlaylistId(id as String?) {
+        _playlistId = id;
     }
 
     function onShow() as Void {
@@ -65,9 +70,6 @@ class OpenPlayerOptionsView extends WatchUi.View {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
             dc.drawText(dc.getWidth() / 2, dc.getHeight() - 65, Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
         }
-        
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() - 45, Graphics.FONT_XTINY, "ENTER: select\nESC: back", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     function onSelect_withIndex(idx as Number) as Void {
@@ -101,65 +103,31 @@ class OpenPlayerOptionsView extends WatchUi.View {
                 Communications.startSync();
             }
         } else if (label.equals("Remove this Playlist")) {
-            var playlistId = null as String?;
-            if (playlistId != null && playlistId.length() > 0) {
-                var syncState = storage.loadSyncState();
-                syncState.removePlaylist(playlistId);
-                storage.saveSyncState(syncState);
-                var tracks = storage.loadSyncedTracks();
-                var remaining = [];
-                for (var i = 0; i < tracks.size(); i++) {
-                    var track = tracks[i] as JellyfinTrack;
-                    if (track.playlistId == null || !track.playlistId.equals(playlistId)) {
-                        remaining.add(track);
-                    }
-                }
-                storage.saveSyncedTracks(remaining);
-                var currentViews = WatchUi.getCurrentView();
-                if (currentViews != null && currentViews.size() > 0) {
-                    var cv = currentViews[0];
-                    if (cv instanceof OpenPlayerConfigurePlaybackView) {
-                        (cv as OpenPlayerConfigurePlaybackView).loadData();
-                    }
-                }
-                WatchUi.requestUpdate();
+            if (_playlistId != null && _playlistId.length() > 0) {
+                var confirmView = new ConfirmActionView("Remove Playlist?");
+                WatchUi.pushView(
+                    confirmView,
+                    new ConfirmActionDelegate(confirmView, new Lang.Method(self, :onConfirmRemovePlaylist)),
+                    WatchUi.SLIDE_IMMEDIATE
+                );
             } else {
                 WatchUi.showToast("No playlist selected", null);
+                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             }
-            var views = WatchUi.getCurrentView();
-            if (views != null && views.size() > 0) {
-                var topView = views[0];
-                if (topView instanceof OpenPlayerConfigurePlaybackView) {
-                    var playbackView = topView as OpenPlayerConfigurePlaybackView;
-                    var playlists = playbackView.getPlaylists();
-                    var selectedIdx = playbackView.getSelectedIndex();
-                    if (playlists.size() > 0 && selectedIdx >= 0 && selectedIdx < playlists.size()) {
-                        playlistId = (playlists[selectedIdx] as Dictionary)["id"] as String?;
-                    }
-                }
-            }
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            
+
         } else if (label.equals("Remove this Track")) {
             var currentIdx = storage.getOptionsTrackSelection();
             var tracks = storage.loadSyncedTracks();
             if (currentIdx >= 0 && currentIdx < tracks.size()) {
-                var remaining = [];
-                for (var i = 0; i < tracks.size(); i++) {
-                    if (i != currentIdx) {
-                        remaining.add(tracks[i]);
-                    }
-                }
-                storage.saveSyncedTracks(remaining);
-                var newIdx = currentIdx;
-                if (newIdx >= remaining.size() && remaining.size() > 0) {
-                    newIdx = remaining.size() - 1;
-                }
-                storage.saveCurrentTrackIndex(newIdx);
-                storage.savePlaybackTrackSelection(newIdx);
+                var confirmView = new ConfirmActionView("Remove Track?");
+                WatchUi.pushView(
+                    confirmView,
+                    new ConfirmActionDelegate(confirmView, new Lang.Method(self, :onConfirmRemoveTrack)),
+                    WatchUi.SLIDE_IMMEDIATE
+                );
+            } else {
+                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             }
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            WatchUi.requestUpdate();
         } else if (label.equals("About")) {
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
             var aboutView = new AboutView();
@@ -169,6 +137,58 @@ class OpenPlayerOptionsView extends WatchUi.View {
                 WatchUi.SLIDE_IMMEDIATE
             );
         }
+    }
+
+    function onConfirmRemovePlaylist() as Void {
+        if (_playlistId != null && _playlistId.length() > 0) {
+            var storage = new StorageManager();
+            var syncState = storage.loadSyncState();
+            syncState.removePlaylist(_playlistId);
+            storage.saveSyncState(syncState);
+            var tracks = storage.loadSyncedTracks();
+            var remaining = [];
+            for (var i = 0; i < tracks.size(); i++) {
+                var track = tracks[i] as JellyfinTrack;
+                if (track.playlistId == null || !track.playlistId.equals(_playlistId)) {
+                    remaining.add(track);
+                }
+            }
+            storage.saveSyncedTracks(remaining);
+            storage.setPendingRemovePlaylistId(null);
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            var currentViews = WatchUi.getCurrentView();
+            if (currentViews != null && currentViews.size() > 0) {
+                var cv = currentViews[0];
+                if (cv instanceof OpenPlayerConfigurePlaybackView) {
+                    (cv as OpenPlayerConfigurePlaybackView).loadData();
+                    (cv as OpenPlayerConfigurePlaybackView).setMode("playlists");
+                }
+            }
+            WatchUi.requestUpdate();
+        }
+    }
+
+    function onConfirmRemoveTrack() as Void {
+        var storage = new StorageManager();
+        var currentIdx = storage.getOptionsTrackSelection();
+        var tracks = storage.loadSyncedTracks();
+        if (currentIdx >= 0 && currentIdx < tracks.size()) {
+            var remaining = [];
+            for (var i = 0; i < tracks.size(); i++) {
+                if (i != currentIdx) {
+                    remaining.add(tracks[i]);
+                }
+            }
+            storage.saveSyncedTracks(remaining);
+            var newIdx = currentIdx;
+            if (newIdx >= remaining.size() && remaining.size() > 0) {
+                newIdx = remaining.size() - 1;
+            }
+            storage.saveCurrentTrackIndex(newIdx);
+            storage.savePlaybackTrackSelection(newIdx);
+        }
+        WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+        WatchUi.requestUpdate();
     }
 }
 

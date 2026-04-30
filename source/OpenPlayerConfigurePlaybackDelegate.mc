@@ -1,6 +1,5 @@
 import Toybox.WatchUi;
 import Toybox.Lang;
-import Toybox.Communications;
 import Toybox.Media;
 
 class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
@@ -173,6 +172,7 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
 
     private function openOptionsMenu() as Void {
         var options = [] as Array;
+        var playlistId = _view != null ? _view.getSelectedPlaylistId() : null;
 
         var syncState = _storage.loadSyncState();
         if (syncState.selectedPlaylistIds.size() > 0) {
@@ -180,16 +180,10 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         }
         options.add("Settings");
         options.add("Sync playlists");
-        options.add("About");
 
         if (_viewMode.equals("playlists")) {
-            var playlists = _storage.loadPlaylists();
-            var selectedIdx = _view != null ? _view.getSelectedIndex() : 0;
-            if (playlists.size() > 0 && selectedIdx >= 0 && selectedIdx < playlists.size()) {
-                var playlist = playlists[selectedIdx] as JellyfinPlaylist;
-                if (syncState.isPlaylistSelected(playlist.id)) {
-                    options.add("Remove this Playlist");
-                }
+            if (playlistId != null && syncState.isPlaylistSelected(playlistId)) {
+                options.add("Remove this Playlist");
             }
         } else {
             var tracks = _storage.loadSyncedTracks();
@@ -200,8 +194,11 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
             }
         }
 
+        options.add("About");
+
         var optionsView = new OpenPlayerOptionsView();
         optionsView.setOptions(options);
+        optionsView.setPlaylistId(playlistId);
         var optionsDelegate = new OpenPlayerOptionsDelegate(optionsView, options);
 
         WatchUi.pushView(

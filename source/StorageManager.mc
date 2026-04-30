@@ -271,6 +271,14 @@ class StorageManager {
         return idx != null ? idx : 0;
     }
 
+    function setPendingRemovePlaylistId(id as String?) as Void {
+        Storage.setValue("pending_remove_playlist_id", id);
+    }
+
+    function getPendingRemovePlaylistId() as String? {
+        return Storage.getValue("pending_remove_playlist_id") as String?;
+    }
+
     function savePlaybackPosition(idx as Number) as Void {
         Storage.setValue("playback_position", idx);
     }
