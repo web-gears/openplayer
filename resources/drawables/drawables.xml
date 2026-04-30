@@ -1,0 +1,9 @@
+<drawables xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <bitmap id="LauncherIcon" filename="launcher_icon.svg" dithering="none" />
+    <bitmap id="ProviderIcon" filename="launcher_icon.png" dithering="none" />
+    <bitmap id="LibraryIcon" filename="launcher_icon2.png" dithering="none" />
+    <bitmap id="DisposableFormQrCode" filename="disposable-form-qr-code.png" />
+    <bitmap id="CoffeeQrCode" filename="coffee-qr.png" />
+    <bitmap id="system_icon_dark__content_library" filename="launcher_icon2.png" />
+    <bitmap id="system_icon_light__content_library" filename="launcher_icon2.png" />
+</drawables>

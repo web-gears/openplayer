@@ -1,0 +1,4 @@
+<layout id="ConfigurePlaybackLayout" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <label x="center" y="5" text="@Strings.configurePlaybackMessage" color="Graphics.COLOR_WHITE" justification="Graphics.TEXT_JUSTIFY_CENTER" />
+    <bitmap id="id_monkey" x="center" y="80" filename="../drawables/monkey.png" />
+</layout>

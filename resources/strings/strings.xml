@@ -1,0 +1,38 @@
+<strings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <string id="AppName">OpenPlayer</string>
+
+    <string id="configureSyncMessage">Configure\nSync</string>
+    <string id="configurePlaybackMessage">Configure\nPlayback</string>
+
+    <string id="welcomeTitle">Welcome</string>
+    <string id="welcomeMessage">Setup your Jellyfin server</string>
+
+    <string id="serverTitle">Server URL</string>
+    <string id="serverMessage">Enter your Jellyfin server address</string>
+
+    <string id="apiKeyTitle">API Key</string>
+    <string id="apiKeyMessage">Enter your Jellyfin API key</string>
+
+    <string id="reviewTitle">Review</string>
+    <string id="reviewMessage">Review your settings</string>
+
+    <string id="syncTitle">Sync</string>
+    <string id="syncMessage">Start syncing playlists</string>
+
+    <string id="loadingMessage">Loading...</string>
+    <string id="noPlaylistsMessage">No playlists found</string>
+    <string id="errorAuthFailed">Authentication failed</string>
+    <string id="errorLoadFailed">Failed to load playlists</string>
+    <string id="errorSyncFailed">Sync failed</string>
+    <string id="errorNoSpace">Not enough storage space</string>
+    <string id="errorSelectPlaylists">Select playlists first</string>
+    <string id="errorNotConfigured">Server not configured</string>
+
+    <string id="syncComplete">Sync Complete!</string>
+    <string id="syncingTracks">Syncing tracks...</string>
+    <string id="loadingPlaylist">Loading playlist...</string>
+
+    <string id="tracksCount">{0} tracks</string>
+    <string id="storageUsed">Storage: {0}</string>
+    <string id="noTracksSynced">No tracks synced</string>
+</strings>
