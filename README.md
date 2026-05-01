@@ -2,6 +2,8 @@
 
 A music and podcast player for Garmin Fenix 6S Pro, syncing with Jellyfin media servers via API key authentication.
 
+[Garmin Connect IQ Store link](https://apps.garmin.com/apps/261eb561-66a9-448f-8ef0-9d3a5b22652a)
+
 <img width="1440" height="720" alt="hero_garmin" src="https://github.com/user-attachments/assets/39d4c0a6-3b38-44c7-9c0b-b31be34e8b1c" />
 
 
