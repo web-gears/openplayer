@@ -181,6 +181,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
 
         _client.getPlaylists(method(:onPlaylistsLoaded));
+        Communications.notifySyncComplete(null);
     }
 
     function onAuthenticatedWithPlaylist(
