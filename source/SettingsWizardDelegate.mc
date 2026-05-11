@@ -336,6 +336,9 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             WatchUi.requestUpdate();
         } else if (responseCode == 409 && _attemptCount < MAX_ATTEMPTS) {
             createSession();
+        } else if (responseCode == -400) {
+            _view.setStep(STEP_QR_LOADING);
+            _view.setError("Service unavailable\nENTER: manual");
         } else if (responseCode < 0) {
             _view.setStep(STEP_QR_LOADING);
             if (responseCode == -200) {
@@ -351,7 +354,7 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             }
         } else {
             _view.setStep(STEP_QR_LOADING);
-            _view.setError("Cannot reach service\nENTER: manual");
+            _view.setError("Service unavailable\nENTER: manual");
         }
     }
 

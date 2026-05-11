@@ -28,13 +28,6 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
         var key = evt.getKey();
 
-        if (_view == null) {
-            var viewArray = WatchUi.getCurrentView();
-            if (viewArray != null && viewArray.size() > 0) {
-                _view = viewArray[0] as OpenPlayerConfigurePlaybackView;
-            }
-        }
-
         if (key == WatchUi.KEY_ESC || key == WatchUi.KEY_LAP) {
             if (_viewMode.equals("tracks")) {
                 _viewMode = "playlists";
