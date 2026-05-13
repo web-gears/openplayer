@@ -21,7 +21,7 @@ A music and podcast player for Garmin Fenix 6S Pro, syncing with Jellyfin media 
 <img width="240" height="240" alt="ezgif-20d663f3e9bcf921" src="https://github.com/user-attachments/assets/f785cd54-17a9-432e-bed0-24223d7d60ae" />
 
 ## Requirements
-- Garmin Fenix 6S Pro (or compatible Connect IQ device)
+- Garmin Fenix 5+ (or compatible Connect IQ device starting API level 3.1 with music and WiFi support)
 - Jellyfin server with public access
 - API key generated from Jellyfin
 
