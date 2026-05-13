@@ -27,18 +27,20 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
 
     function getPlaybackConfigurationView() as [WatchUi.Views] or
         [WatchUi.Views, WatchUi.InputDelegates] {
+        var view = new OpenPlayerConfigurePlaybackView();
         return [
-            new OpenPlayerConfigurePlaybackView(),
-            new OpenPlayerConfigurePlaybackDelegate(),
+            view,
+            new OpenPlayerConfigurePlaybackDelegate(view),
         ];
     }
 
     function getInitialView() as [WatchUi.Views] or
         [WatchUi.Views, WatchUi.InputDelegates] {
         if (_storage.isConfigured()) {
+            var view = new OpenPlayerConfigurePlaybackView();
             return [
-                new OpenPlayerConfigurePlaybackView(),
-                new OpenPlayerConfigurePlaybackDelegate(),
+                view,
+                new OpenPlayerConfigurePlaybackDelegate(view),
             ];
         } else {
             var wizardView = new SettingsWizardView();

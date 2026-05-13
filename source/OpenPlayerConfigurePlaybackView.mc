@@ -90,7 +90,7 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             dc.drawText(dc.getWidth() / 2, 35, Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
-        dc.drawText(dc.getWidth() / 2, 20, Graphics.FONT_MEDIUM, "Select Playlist", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, 20, Graphics.FONT_MEDIUM, "Playlists", Graphics.TEXT_JUSTIFY_CENTER);
 
         var visibleCount = 3;
         var startIdx = _selectedIndex;

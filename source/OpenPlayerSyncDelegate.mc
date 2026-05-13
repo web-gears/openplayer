@@ -85,7 +85,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
 
         _currentPlaylistIdx = index;
         _currentPageStart = 0;
-        _syncedTracks = [];
         fetchNextPage();
     }
 

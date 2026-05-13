@@ -188,9 +188,10 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             toggleCurrentSelection();
             return true;
         } else if (key == WatchUi.KEY_LAP) {
+            var playbackView = new OpenPlayerConfigurePlaybackView();
             WatchUi.pushView(
-                new OpenPlayerConfigurePlaybackView(),
-                new OpenPlayerConfigurePlaybackDelegate(),
+                playbackView,
+                new OpenPlayerConfigurePlaybackDelegate(playbackView),
                 WatchUi.SLIDE_UP
             );
             return true;

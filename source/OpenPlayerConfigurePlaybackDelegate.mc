@@ -7,22 +7,11 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
     private var _view as OpenPlayerConfigurePlaybackView?;
     private var _viewMode as String = "playlists";
 
-    function initialize() {
+    function initialize(view as OpenPlayerConfigurePlaybackView?) {
         BehaviorDelegate.initialize();
         _storage = new StorageManager();
         _viewMode = "playlists";
-    }
-
-    function onShow() as Void {
-        var viewArray = WatchUi.getCurrentView();
-        if (viewArray != null && viewArray.size() > 0) {
-            _view = viewArray[0] as OpenPlayerConfigurePlaybackView;
-        }
-        if (_view != null) {
-            _view.loadData();
-            _viewMode = "playlists";
-            WatchUi.requestUpdate();
-        }
+        _view = view;
     }
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {

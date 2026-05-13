@@ -276,7 +276,7 @@ class JellyfinClient {
                     var albumName = album != null ? album : "Unknown Album";
                     var durationSeconds =
                         runTimeTicks != null ? runTimeTicks / 10000000 : 0;
-                    var downloadSize = 0l;
+                    var downloadSize = 0;
 
                     if (mediaSources != null && mediaSources.size() > 0) {
                         var source = mediaSources[0] as Dictionary;
@@ -307,18 +307,6 @@ class JellyfinClient {
         }
     }
 
-    function getDownloadUrl(itemId as Object) as String? {
-        var server = _storage.getServer();
-
-        if (server == "") {
-            return null;
-        }
-
-        return (
-            buildUrl(server, "/Items/" + itemId + "/Download") + "&static=true"
-        );
-    }
-
     function downloadAndSaveTrack(
         itemId as Object,
         callback as
@@ -342,7 +330,7 @@ class JellyfinClient {
         }
 
         var url =
-            buildUrl(server, "/Items/" + itemId + "/Download") + "?static=true";
+            buildUrl(server, "/Audio/" + itemId + "/stream.mp3?") + "?MaxStreamingBitrate=256000";
         
 
         var options = {
