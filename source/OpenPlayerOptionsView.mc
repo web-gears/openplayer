@@ -2,6 +2,7 @@ import Toybox.WatchUi;
 import Toybox.Lang;
 import Toybox.Graphics;
 import Toybox.Communications;
+import ScaleHelper;
 
 class OpenPlayerOptionsView extends WatchUi.View {
     private var _options as Array = [];
@@ -37,7 +38,7 @@ class OpenPlayerOptionsView extends WatchUi.View {
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
-        dc.drawText(dc.getWidth() / 2, 20, Graphics.FONT_MEDIUM, "Options", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 20), Graphics.FONT_MEDIUM, "Options", Graphics.TEXT_JUSTIFY_CENTER);
 
         var startIdx = _selectedIndex;
         if (startIdx > _options.size() - 5) {
@@ -47,28 +48,30 @@ class OpenPlayerOptionsView extends WatchUi.View {
             startIdx = 0;
         }
 
-        var y = 55;
+        var rowH = ScaleHelper.scale(dc, 25);
+        var spacing = ScaleHelper.scale(dc, 30);
+        var y = ScaleHelper.scale(dc, 55);
         for (var i = 0; i < 5 && startIdx + i < _options.size(); i++) {
             var optIdx = startIdx + i;
             if (optIdx == _selectedIndex) {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.fillRectangle(0, y, dc.getWidth(), 25);
+                dc.fillRectangle(0, y, dc.getWidth(), rowH);
                 dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
             } else {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             }
-            dc.drawText(20, y, Graphics.FONT_TINY, _options[optIdx] as String, Graphics.TEXT_JUSTIFY_LEFT);
-            y = y + 30;
+            dc.drawText(ScaleHelper.scale(dc, 20), y, Graphics.FONT_TINY, _options[optIdx] as String, Graphics.TEXT_JUSTIFY_LEFT);
+            y = y + spacing;
         }
 
         if (startIdx > 0) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, 10, Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 10), Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         if (startIdx + 5 < _options.size()) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - 65, Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 65), Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
         }
     }
 

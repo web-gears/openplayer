@@ -2,6 +2,7 @@ import Toybox.WatchUi;
 import Toybox.Lang;
 import Toybox.Communications;
 import Toybox.Graphics;
+import ScaleHelper;
 
 class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     private var _view as OpenPlayerConfigureSyncView? = null;
@@ -316,7 +317,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
 
         dc.drawText(
             dc.getWidth() / 2,
-            20,
+            ScaleHelper.scale(dc, 20),
             Graphics.FONT_TINY,
             "Syncing...",
             Graphics.TEXT_JUSTIFY_CENTER
@@ -324,19 +325,19 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
 
         if (_progress > 0) {
             dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
-            dc.fillRectangle(20, dc.getHeight() / 2, dc.getWidth() - 40, 10);
+            dc.fillRectangle(ScaleHelper.scale(dc, 20), dc.getHeight() / 2, dc.getWidth() - ScaleHelper.scale(dc, 40), ScaleHelper.scale(dc, 10));
             dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_BLACK);
             var barWidth = (
-                ((dc.getWidth() - 40) * _progress) /
+                ((dc.getWidth() - ScaleHelper.scale(dc, 40)) * _progress) /
                 100
             ).toNumber();
-            dc.fillRectangle(20, dc.getHeight() / 2, barWidth, 10);
+            dc.fillRectangle(ScaleHelper.scale(dc, 20), dc.getHeight() / 2, barWidth, ScaleHelper.scale(dc, 10));
         }
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.drawText(
             dc.getWidth() / 2,
-            dc.getHeight() / 2 + 25,
+            dc.getHeight() / 2 + ScaleHelper.scale(dc, 25),
             Graphics.FONT_TINY,
             _statusText,
             Graphics.TEXT_JUSTIFY_CENTER
@@ -345,14 +346,14 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
         if (_isComplete) {
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() / 2 + 25,
+                dc.getHeight() / 2 + ScaleHelper.scale(dc, 25),
                 Graphics.FONT_MEDIUM,
                 "Sync Complete!",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
         dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() - 20,
+                dc.getHeight() - ScaleHelper.scale(dc, 20),
                 Graphics.FONT_TINY,
                 "ENTER: Done",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -363,7 +364,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_BLACK);
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() - 20,
+                dc.getHeight() - ScaleHelper.scale(dc, 20),
                 Graphics.FONT_TINY,
                 _errorMessage,
                 Graphics.TEXT_JUSTIFY_CENTER

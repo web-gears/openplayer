@@ -1,6 +1,7 @@
 import Toybox.Lang;
 import Toybox.WatchUi;
 import Toybox.Graphics;
+import ScaleHelper;
 
 class OpenPlayerConfigurePlaybackView extends WatchUi.View {
     private var _tracks as Array = [];
@@ -81,16 +82,16 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
 
     private function renderPlaylistList(dc as Dc) as Void {
         if (_playlists.size() == 0) {
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - 40, Graphics.FONT_MEDIUM, "No synced tracks\nMENU: Setup", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, "No synced tracks\nMENU: Setup", Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 
         if (_selectedIndex > 0) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, 35, Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 35), Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
-        dc.drawText(dc.getWidth() / 2, 20, Graphics.FONT_MEDIUM, "Playlists", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 20), Graphics.FONT_MEDIUM, "Playlists", Graphics.TEXT_JUSTIFY_CENTER);
 
         var visibleCount = 3;
         var startIdx = _selectedIndex;
@@ -101,28 +102,29 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             startIdx = 0;
         }
 
-        var y = 60;
+        var rowH = ScaleHelper.scale(dc, 25);
+        var y = ScaleHelper.scale(dc, 60);
         for (var i = 0; i < visibleCount && startIdx + i < _playlists.size(); i++) {
             var idx = startIdx + i;
             var playlist = _playlists[idx] as Dictionary;
             if (idx == _selectedIndex) {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.fillRectangle(5, y, dc.getWidth() - 10, 25);
+                dc.fillRectangle(ScaleHelper.scale(dc, 5), y, dc.getWidth() - ScaleHelper.scale(dc, 10), rowH);
                 dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
             } else {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             }
-            dc.drawText(20, y, Graphics.FONT_TINY, (idx + 1) + ": " + (playlist["name"] as String), Graphics.TEXT_JUSTIFY_LEFT);
-            y = y + 25;
+            dc.drawText(ScaleHelper.scale(dc, 20), y, Graphics.FONT_TINY, (idx + 1) + ": " + (playlist["name"] as String), Graphics.TEXT_JUSTIFY_LEFT);
+            y = y + rowH;
         }
 
         if (startIdx + visibleCount < _playlists.size()) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - 65, Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 65), Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() - 50, Graphics.FONT_XTINY, "ENTER: select\nMENU: options", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: select\nMENU: options", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     private function renderTrackList(dc as Dc) as Void {
@@ -155,7 +157,7 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         }
         _scrollOffset = scrollOffset;
 
-        dc.drawText(dc.getWidth() / 2, 20, Graphics.FONT_MEDIUM, "Select Track", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 20), Graphics.FONT_MEDIUM, "Select Track", Graphics.TEXT_JUSTIFY_CENTER);
 
         var startIdx = scrollOffset;
         if (startIdx > filteredTracks.size() - visibleCount) {
@@ -165,33 +167,34 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             startIdx = 0;
         }
 
-        var y = 60;
+        var rowH = ScaleHelper.scale(dc, 25);
+        var y = ScaleHelper.scale(dc, 60);
         for (var i = 0; i < visibleCount && startIdx + i < filteredTracks.size(); i++) {
             var idx = startIdx + i;
             var track = filteredTracks[idx] as JellyfinTrack;
             if (idx == _trackSelectedIndex) {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.fillRectangle(5, y, dc.getWidth() - 10, 25);
+                dc.fillRectangle(ScaleHelper.scale(dc, 5), y, dc.getWidth() - ScaleHelper.scale(dc, 10), rowH);
                 dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
             } else {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             }
-            dc.drawText(20, y, Graphics.FONT_TINY, (idx + 1) + ": " + track.name, Graphics.TEXT_JUSTIFY_LEFT);
-            y = y + 25;
+            dc.drawText(ScaleHelper.scale(dc, 20), y, Graphics.FONT_TINY, (idx + 1) + ": " + track.name, Graphics.TEXT_JUSTIFY_LEFT);
+            y = y + rowH;
         }
 
         if (scrollOffset > 0) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, 35, Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 35), Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         if (startIdx + visibleCount < filteredTracks.size()) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - 65, Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 65), Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() - 50, Graphics.FONT_XTINY, "LAP: playlists\nENTER: play", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "LAP: playlists\nENTER: play", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     function setMode(mode as String) as Void {

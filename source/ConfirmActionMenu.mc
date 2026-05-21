@@ -1,6 +1,7 @@
 using Toybox.WatchUi;
 using Toybox.Lang;
 using Toybox.Graphics;
+using ScaleHelper;
 
 class ConfirmActionView extends WatchUi.View {
     private var _title;
@@ -16,20 +17,22 @@ class ConfirmActionView extends WatchUi.View {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
 
-        dc.drawText(dc.getWidth() / 2, 50, Graphics.FONT_MEDIUM, _title, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 50), Graphics.FONT_MEDIUM, _title, Graphics.TEXT_JUSTIFY_CENTER);
 
         var options = ["Yes", "No"];
-        var y = 90;
+        var rowH = ScaleHelper.scale(dc, 25);
+        var spacing = ScaleHelper.scale(dc, 30);
+        var y = ScaleHelper.scale(dc, 90);
         for (var i = 0; i < options.size(); i++) {
             if (i == _selected) {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.fillRectangle(0, y, dc.getWidth(), 25);
+                dc.fillRectangle(0, y, dc.getWidth(), rowH);
                 dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
             } else {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             }
-            dc.drawText(20, y, Graphics.FONT_TINY, options[i], Graphics.TEXT_JUSTIFY_LEFT);
-            y = y + 30;
+            dc.drawText(ScaleHelper.scale(dc, 20), y, Graphics.FONT_TINY, options[i], Graphics.TEXT_JUSTIFY_LEFT);
+            y = y + spacing;
         }
     }
 

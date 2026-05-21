@@ -1,6 +1,7 @@
 import Toybox.Graphics;
 import Toybox.WatchUi;
 import Toybox.Lang;
+import ScaleHelper;
 
 class OpenPlayerConfigureSyncView extends WatchUi.View {
     private var _statusText as String = "";
@@ -37,8 +38,8 @@ if (rc == 200) {
             var names = storage.getPendingPlaylistNames();
             var syncTracks = storage.loadSyncedTracks();
             if (ids != null && names != null) {
-                var idArray = splitString(ids, ",");
-                var nameArray = splitString(names, "|");
+                var idArray = ScaleHelper.splitString(ids, ",");
+                var nameArray = ScaleHelper.splitString(names, "|");
                 var newPlaylists = [];
                 var minLen = idArray.size();
                 if (nameArray.size() < minLen) {
@@ -72,27 +73,6 @@ if (rc == 200) {
         }
     }
 
-    function splitString(text as String, delimiter as String) as Array {
-        var result = [];
-        var current = "";
-
-        for (var i = 0; i < text.length(); i++) {
-            var char = text.substring(i, i + 1);
-            if (char.equals(delimiter)) {
-                result.add(current);
-                current = "";
-            } else {
-                current = current + char;
-            }
-        }
-
-        if (current.length() > 0 || text.length() == 0) {
-            result.add(current);
-        }
-
-        return result;
-    }
-
     function formatSize(bytes as Number) as String {
         if (bytes < 1024) {
             return bytes + " B";
@@ -124,7 +104,7 @@ if (rc == 200) {
         var title = "Sync Playlists";
         dc.drawText(
             dc.getWidth() / 2,
-            8,
+            ScaleHelper.scale(dc, 8),
             Graphics.FONT_TINY,
             title,
             Graphics.TEXT_JUSTIFY_CENTER
@@ -146,7 +126,7 @@ if (rc == 200) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() / 2 - 20,
+                dc.getHeight() / 2 - ScaleHelper.scale(dc, 20),
                 Graphics.FONT_TINY,
                 _errorMessage.length() > 0
                     ? _errorMessage
@@ -155,7 +135,7 @@ if (rc == 200) {
             );
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() / 2 + 10,
+                dc.getHeight() / 2 + ScaleHelper.scale(dc, 10),
                 Graphics.FONT_TINY,
                 "LAP: Close",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -172,7 +152,8 @@ if (rc == 200) {
             startIdx = 0;
         }
 
-        var y = 55;
+        var rowH = ScaleHelper.scale(dc, 25);
+        var y = ScaleHelper.scale(dc, 55);
         for (
             var i = 0;
             i < visibleCount && startIdx + i < _playlists.size();
@@ -184,7 +165,7 @@ if (rc == 200) {
 
             if (idx == _currentPlaylistIndex) {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_WHITE);
-                dc.fillRectangle(5, y, dc.getWidth() - 10, 25);
+                dc.fillRectangle(ScaleHelper.scale(dc, 5), y, dc.getWidth() - ScaleHelper.scale(dc, 10), rowH);
                 dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
             } else {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -192,44 +173,44 @@ if (rc == 200) {
 
             var checkMark = isSelected ? "[X]" : "[ ]";
             dc.drawText(
-                10,
+                ScaleHelper.scale(dc, 10),
                 y,
                 Graphics.FONT_TINY,
                 checkMark,
                 Graphics.TEXT_JUSTIFY_LEFT
             );
             dc.drawText(
-                35,
+                ScaleHelper.scale(dc, 35),
                 y,
                 Graphics.FONT_TINY,
                 playlist.name,
                 Graphics.TEXT_JUSTIFY_LEFT
             );
             dc.drawText(
-                dc.getWidth() - 10,
+                dc.getWidth() - ScaleHelper.scale(dc, 10),
                 y,
                 Graphics.FONT_TINY,
                 "[" + playlist.trackCount + "]",
                 Graphics.TEXT_JUSTIFY_RIGHT
             );
 
-            y = y + 25;
+            y = y + rowH;
         }
 
         if (startIdx > 0) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, 35, Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 35), Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         if (startIdx + visibleCount < _playlists.size()) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - 85, Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 85), Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.drawText(
             dc.getWidth() / 2,
-            dc.getHeight() - 65,
+            dc.getHeight() - ScaleHelper.scale(dc, 65),
             Graphics.FONT_XTINY,
             "MENU: select | ENTER: sync",
             Graphics.TEXT_JUSTIFY_CENTER
@@ -238,7 +219,7 @@ if (rc == 200) {
         dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
         dc.drawText(
             dc.getWidth() / 2,
-            dc.getHeight() - 45,
+            dc.getHeight() - ScaleHelper.scale(dc, 45),
             Graphics.FONT_XTINY,
             "UP/DOWN: scroll\nLAP: play",
             Graphics.TEXT_JUSTIFY_CENTER
