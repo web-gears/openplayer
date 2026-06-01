@@ -13,52 +13,18 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     private var _isActive as Boolean = false;
     private var _pendingResponseCode as Number = -1;
     private var _pendingData as Dictionary?;
-    private var _hasPendingResponse as Boolean = false;
-    private var _pendingDataReady as Boolean = false;
-    private var _lastResponseCode as Number = -1;
-    private var _lastResponseData as Dictionary?;
 
-    function hasPendingData() as Boolean {
-        return _pendingDataReady;
-    }
-
-    function getPendingResponseCode() as Number {
-        return _lastResponseCode;
-    }
-
-    function getPendingResponseData() as Dictionary? {
-        return _lastResponseData;
-    }
-
-    function clearPendingData() as Void {
-        _pendingDataReady = false;
-        _lastResponseCode = -1;
-        _lastResponseData = null;
-    }
-
-    function initialize() {
+    function initialize(view as OpenPlayerConfigureSyncView) {
         BehaviorDelegate.initialize();
         _storage = new StorageManager();
         _client = new JellyfinClient(_storage);
         _syncState = _storage.loadSyncState();
         _currentPlaylistIndex = _storage.getCurrentPlaylistIndex();
-        
-        var viewArray = WatchUi.getCurrentView();
-        if (viewArray != null && viewArray.size() > 0) {
-            _view = viewArray[0] as OpenPlayerConfigureSyncView;
-        }
+        _view = view;
     }
 
     function onShow() as Void {
         _isActive = true;
-        var viewArray = WatchUi.getCurrentView();
-        if (viewArray != null && viewArray.size() > 0) {
-            _view = viewArray[0] as OpenPlayerConfigureSyncView;
-        }
-        if (_pendingResponseCode != -1) {
-            processPendingResponse();
-        }
-        
         if (_storage.isConfigured()) {
             loadPlaylists();
         } else {
@@ -82,6 +48,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             return;
         }
 
+        _storage.saveSyncLoading(true);
         WatchUi.requestUpdate();
 
         var apiKey = _storage.getApiKeyDirect();
@@ -97,12 +64,15 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         data as Dictionary?
     ) as Void {
         if (!_isActive) {
+            _storage.saveSyncLoading(false);
             return;
         }
         if (responseCode == 200) {
             fetchPlaylists();
         } else {
             _storage.savePendingPlaylistResponseCode(401);
+            _storage.saveSyncLoading(false);
+            WatchUi.requestUpdate();
         }
     }
 
@@ -116,7 +86,6 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     ) as Void {
         _pendingResponseCode = responseCode;
         _pendingData = data;
-        _hasPendingResponse = true;
         if (responseCode == 200 && data != null) {
             var items = data["Items"] as Array;
             if (items != null) {
@@ -143,24 +112,16 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         } else {
             _storage.savePendingPlaylistResponseCode(responseCode);
         }
+        processPendingResponse();
+        _storage.saveSyncLoading(false);
+        WatchUi.requestUpdate();
     }
 
-    function onKey(evt as WatchUi.KeyEvent) as Boolean {
+    function onKey(evt) as Boolean {
         var key = evt.getKey();
 
-        if (_view == null) {
-            return false;
-        }
-
-        if (_hasPendingResponse) {
-            processPendingResponse();
-            _hasPendingResponse = false;
-            _pendingResponseCode = -1;
-            _pendingData = null;
-        }
-
-        if (key == WatchUi.KEY_DOWN) {
-            var playlists = _storage.loadPlaylists();
+        if (key == 8) {
+            var playlists = _loadPlaylistsFallback();
             if (playlists.size() > 0) {
                 var newIdx = _currentPlaylistIndex + 1;
                 if (newIdx < playlists.size()) {
@@ -171,8 +132,8 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                 }
             }
             return true;
-        } else if (key == WatchUi.KEY_UP) {
-            var playlists = _storage.loadPlaylists();
+        } else if (key == 13) {
+            var playlists = _loadPlaylistsFallback();
             if (playlists.size() > 0) {
                 var newIdx = _currentPlaylistIndex - 1;
                 if (newIdx >= 0) {
@@ -182,13 +143,13 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                 }
             }
             return true;
-        } else if (key == WatchUi.KEY_ENTER) {
+        } else if (key == 4) {
             startSync();
             return true;
-        } else if (key == WatchUi.KEY_MENU) {
+        } else if (key == 7) {
             toggleCurrentSelection();
             return true;
-        } else if (key == WatchUi.KEY_LAP) {
+        } else if (key == 5) {
             var playbackView = new OpenPlayerConfigurePlaybackView();
             WatchUi.pushView(
                 playbackView,
@@ -201,7 +162,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function toggleCurrentSelection() as Void {
-        var playlists = _storage.loadPlaylists();
+        var playlists = _loadPlaylistsFallback();
         if (playlists.size() > 0 && _currentPlaylistIndex < playlists.size()) {
             var playlist = playlists[_currentPlaylistIndex] as JellyfinPlaylist;
             var isSelected = _syncState.selectedPlaylistIds.indexOf(playlist.id) >= 0;
@@ -215,7 +176,9 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                 _syncState.selectedPlaylistIds = newSelected;
             } else {
                 if (!_storage.canSelectPlaylist(_syncState.selectedPlaylistIds.size())) {
-                    _view.setError("Free: max " + _storage.getMaxPlaylists() + " playlist(s)");
+                    if (_view != null) {
+                        _view.setError("Free: max " + _storage.getMaxPlaylists() + " playlist(s)");
+                    }
                     return;
                 }
                 _syncState.selectedPlaylistIds.add(playlist.id);
@@ -223,6 +186,27 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             _storage.saveSyncState(_syncState);
             WatchUi.requestUpdate();
         }
+    }
+
+    function _loadPlaylistsFallback() as Array {
+        var playlists = _storage.loadPlaylists();
+        if (playlists.size() == 0) {
+            var rc = _storage.getPendingPlaylistResponseCode();
+            if (rc == 200) {
+                var ids = _storage.getPendingPlaylistIds();
+                var names = _storage.getPendingPlaylistNames();
+                if (ids != null && names != null) {
+                    var idArray = ScaleHelper.splitString(ids, ",");
+                    var nameArray = ScaleHelper.splitString(names, "|");
+                    var min = idArray.size();
+                    if (nameArray.size() < min) { min = nameArray.size(); }
+                    for (var i = 0; i < min; i++) {
+                        playlists.add(new JellyfinPlaylist(idArray[i], nameArray[i], 0));
+                    }
+                }
+            }
+        }
+        return playlists;
     }
 
     function processPendingResponse() as Void {
@@ -260,7 +244,6 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                 }
             }
             _storage.savePlaylists(newPlaylists);
-
             _storage.saveSyncState(_syncState);
         }
     }

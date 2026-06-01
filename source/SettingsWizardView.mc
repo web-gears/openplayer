@@ -68,31 +68,24 @@ class SettingsWizardView extends WatchUi.View {
         } else if (_step == STEP_QR_DISPLAY) {
             if (_qrCodeBitmap != null) {
                 if (Graphics has :AffineTransform && dc has :drawBitmap2) {
-                    // 1. Get original integer dimensions as Floats
                     var origW = _qrCodeBitmap.getWidth().toFloat();
                     var origH = _qrCodeBitmap.getHeight().toFloat();
 
-                    // 2. Determine target size
-                    // Ensure these values are converted to Float for the math
                     var targetW = ScaleHelper.scale(dc, _qrCodeBitmap.getWidth()).toFloat(); 
-                    var targetH = ScaleHelper.scale(dc, _qrCodeBitmap.getHeight()).toFloat(); // Replace with your target height variable
+                    var targetH = ScaleHelper.scale(dc, _qrCodeBitmap.getHeight()).toFloat();
 
-                    // 3. Compute exact Float scaling factors
                     var scaleFactorX = targetW / origW;
                     var scaleFactorY = targetH / origH;
 
-                    // 4. Safely set up the AffineTransform matrix
                     var transform = new Graphics.AffineTransform();
-                    transform.scale(scaleFactorX, scaleFactorY); // This alters 'transform' in place
+                    transform.scale(scaleFactorX, scaleFactorY);
 
-                    // 5. Structure the options dictionary safely 
                     var bitmapOptions = {
                         :bitmapX => 0,
                         :bitmapY => 0,
                         :transform => transform
                     };
 
-                    // 6. Draw clean and centered on the Fenix 8 Pro screen
                     dc.drawBitmap2(
                         dc.getWidth() / 2 - ScaleHelper.scale(dc, 47), 
                         ScaleHelper.scale(dc, 83), 
@@ -103,13 +96,13 @@ class SettingsWizardView extends WatchUi.View {
                     dc.drawBitmap(dc.getWidth() / 2 - 47, 83, _qrCodeBitmap);
                 }
 
-                dc.drawText(dc.getWidth() / 2,  dc.getHeight() - ScaleHelper.scale(dc, 60), Graphics.FONT_MEDIUM, _sessionId, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2,  dc.getHeight() - ScaleHelper.scale(dc, 60), Graphics.FONT_MEDIUM, formatSessionId(), Graphics.TEXT_JUSTIFY_CENTER);
             } else {
                 dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
                 dc.drawRectangle(ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 45), dc.getWidth() - ScaleHelper.scale(dc, 100), ScaleHelper.scale(dc, 100));
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
                 dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 90), Graphics.FONT_TINY, "[QR]", Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 155), Graphics.FONT_TINY, _sessionId, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 155), Graphics.FONT_TINY, formatSessionId(), Graphics.TEXT_JUSTIFY_CENTER);
             }
             var mins = _remainingSeconds / 60;
             var secs = _remainingSeconds % 60;
@@ -271,6 +264,19 @@ private function updateStep() as Void {
             _title = "Done";
             _message = "Settings Saved";
         }
+    }
+
+    private function formatSessionId() as String {
+        var result = "";
+        for (var i = 0; i < _sessionId.length(); i++) {
+            var ch = _sessionId.substring(i, i + 1);
+            if (ch.equals("0")) {
+                result = result + "\u00D8";
+            } else {
+                result = result + ch;
+            }
+        }
+        return result;
     }
 
     private function wrapText(text as String, maxWidth as Number) as Array {

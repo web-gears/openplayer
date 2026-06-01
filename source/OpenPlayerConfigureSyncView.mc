@@ -88,9 +88,14 @@ if (rc == 200) {
     }
 
     function onUpdate(dc as Dc) as Void {
+        var storage = new StorageManager();
+        _isLoading = storage.isSyncLoading();
+        if (_isLoading) {
+            _statusText = "Loading...";
+        }
+
         _loadPlaylists();
 
-        var storage = new StorageManager();
         _currentPlaylistIndex = storage.getCurrentPlaylistIndex();
         var syncState = storage.loadSyncState();
         _selectedIndices = [];

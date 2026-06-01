@@ -7,6 +7,7 @@ const AUTH_METHOD_ONRESPONSE = 0;
 const PLAYLISTS_METHOD_ONRESPONSE = 1;
 const TRACKS_METHOD_ONRESPONSE = 2;
 
+(:background)
 class JellyfinClient {
     private var _storage as StorageManager;
     private var _pendingMethod as Number = 0;
@@ -254,7 +255,7 @@ class JellyfinClient {
         if (responseCode == 200 && data != null) {
             var items = data["Items"] as Array?;
             if (items == null) {
-                _callback.invoke(200, null);
+                _tracksCallback.invoke(200, [], _pendingPlaylistIndex);
                 return;
             }
             var tracks = [];
@@ -329,9 +330,7 @@ class JellyfinClient {
             return;
         }
 
-        var url =
-            buildUrl(server, "/Audio/" + itemId + "/stream.mp3?") + "?MaxStreamingBitrate=256000";
-        
+        var url = buildUrl(server, "/Audio/" + itemId + "/stream.mp3") + "?MaxStreamingBitrate=192000";
 
         var options = {
             :method => Communications.HTTP_REQUEST_METHOD_GET,

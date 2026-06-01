@@ -92,19 +92,26 @@ class OpenPlayerOptionsView extends WatchUi.View {
             );
         } else if (label.equals("Sync playlists")) {
             WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            var syncView = new OpenPlayerConfigureSyncView();
             WatchUi.pushView(
-                new OpenPlayerConfigureSyncView(),
-                new OpenPlayerConfigureSyncDelegate(),
+                syncView,
+                new OpenPlayerConfigureSyncDelegate(syncView),
                 WatchUi.SLIDE_IMMEDIATE
             );
         } else if (label.equals("Sync Now")) {
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            var syncState = storage.loadSyncState();
-            if (syncState.selectedPlaylistIds.size() == 0) {
-                WatchUi.showToast("No playlists queued", null);
-            } else {
-                Communications.startSync();
+            if (!storage.isConfigured()) {
+                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+                WatchUi.showToast("Configure server first", null);
+                return;
             }
+            var syncState = storage.loadSyncState();
+            if (syncState.selectedPlaylistIds == null || syncState.selectedPlaylistIds.size() == 0) {
+                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+                WatchUi.showToast("Select playlists first", null);
+                return;
+            }
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            Communications.startSync();
         } else if (label.equals("Remove this Playlist")) {
             if (_playlistId != null && _playlistId.length() > 0) {
                 var confirmView = new ConfirmActionView("Remove Playlist?");
@@ -139,7 +146,26 @@ class OpenPlayerOptionsView extends WatchUi.View {
                 new AboutDelegate(),
                 WatchUi.SLIDE_IMMEDIATE
             );
+        } else if (label.equals("Clear App Data")) {
+            var confirmView = new ConfirmActionView("Clear all data?");
+            WatchUi.pushView(
+                confirmView,
+                new ConfirmActionDelegate(confirmView, new Lang.Method(self, :onConfirmClearAllData)),
+                WatchUi.SLIDE_IMMEDIATE
+            );
         }
+    }
+
+    function onConfirmClearAllData() as Void {
+        var storage = new StorageManager();
+        storage.clearAllData();
+        var wizardView = new SettingsWizardView();
+        WatchUi.switchToView(
+            wizardView,
+            new SettingsWizardDelegate(wizardView),
+            WatchUi.SLIDE_IMMEDIATE
+        );
+        WatchUi.showToast("All data and cached audio cleared", null);
     }
 
     function onConfirmRemovePlaylist() as Void {
@@ -176,6 +202,8 @@ class OpenPlayerOptionsView extends WatchUi.View {
         var currentIdx = storage.getOptionsTrackSelection();
         var tracks = storage.loadSyncedTracks();
         if (currentIdx >= 0 && currentIdx < tracks.size()) {
+            var removedTrack = tracks[currentIdx] as JellyfinTrack;
+            storage.deleteCachedItemByTitle(removedTrack.name);
             var remaining = [];
             for (var i = 0; i < tracks.size(); i++) {
                 if (i != currentIdx) {

@@ -35,6 +35,22 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         _tracks = storage.loadSyncedTracks();
         
         var savedPlaylists = storage.loadPlaylists() as Array;
+        if (savedPlaylists.size() == 0) {
+            var rc = storage.getPendingPlaylistResponseCode();
+            if (rc == 200) {
+                var ids = storage.getPendingPlaylistIds();
+                var names = storage.getPendingPlaylistNames();
+                if (ids != null && names != null) {
+                    var idArray = ScaleHelper.splitString(ids, ",");
+                    var nameArray = ScaleHelper.splitString(names, "|");
+                    var min = idArray.size();
+                    if (nameArray.size() < min) { min = nameArray.size(); }
+                    for (var i = 0; i < min; i++) {
+                        savedPlaylists.add(new JellyfinPlaylist(idArray[i], nameArray[i], 0));
+                    }
+                }
+            }
+        }
         var unique = [];
         var seenIds = [];
         

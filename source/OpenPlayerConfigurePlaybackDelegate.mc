@@ -156,15 +156,16 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         var options = [] as Array;
         var playlistId = _view != null ? _view.getSelectedPlaylistId() : null;
 
-        var syncState = _storage.loadSyncState();
-        if (syncState.selectedPlaylistIds.size() > 0) {
+        if (_storage.isConfigured()) {
             options.add("Sync Now");
         }
+        if (_storage.isConfigured()) {
+            options.add("Sync playlists");
+        }
         options.add("Settings");
-        options.add("Sync playlists");
 
         if (_viewMode.equals("playlists")) {
-            if (playlistId != null && syncState.isPlaylistSelected(playlistId)) {
+            if (playlistId != null) {
                 options.add("Remove this Playlist");
             }
         } else {
@@ -177,6 +178,7 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         }
 
         options.add("About");
+        options.add("Clear App Data");
 
         var optionsView = new OpenPlayerOptionsView();
         optionsView.setOptions(options);

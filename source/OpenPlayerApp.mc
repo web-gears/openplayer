@@ -50,9 +50,10 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
 
     function getSyncConfigurationView() as [WatchUi.Views] or
         [WatchUi.Views, WatchUi.InputDelegates] {
+        var syncView = new OpenPlayerConfigureSyncView();
         return [
-            new OpenPlayerConfigureSyncView(),
-            new OpenPlayerConfigureSyncDelegate(),
+            syncView,
+            new OpenPlayerConfigureSyncDelegate(syncView),
         ];
     }
 

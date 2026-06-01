@@ -223,8 +223,8 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
                 return true;
             } else if (step == STEP_DONE) {
                 _isActive = false;
-                var syncDelegate = new OpenPlayerConfigureSyncDelegate();
                 var syncView = new OpenPlayerConfigureSyncView();
+                var syncDelegate = new OpenPlayerConfigureSyncDelegate(syncView);
                 WatchUi.switchToView(
                     syncView,
                     syncDelegate,
@@ -488,9 +488,10 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function startSync() as Void {
-        var syncDelegate = new OpenPlayerConfigureSyncDelegate();
+        var syncView = new OpenPlayerConfigureSyncView();
+        var syncDelegate = new OpenPlayerConfigureSyncDelegate(syncView);
         WatchUi.switchToView(
-            new OpenPlayerConfigureSyncView(),
+            syncView,
             syncDelegate,
             WatchUi.SLIDE_IMMEDIATE
         );
