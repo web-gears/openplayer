@@ -320,7 +320,8 @@ class JellyfinClient {
                             String or
                             PersistedContent.Iterator
                 ) as Void
-            )
+            ),
+        bitrate as Number or Null
     ) as Void {
         var server = _storage.getServer();
         var apiKey = _storage.getApiKeyDirect();
@@ -330,7 +331,9 @@ class JellyfinClient {
             return;
         }
 
-        var url = buildUrl(server, "/Audio/" + itemId + "/stream.mp3") + "?MaxStreamingBitrate=192000";
+        if (bitrate == null) { bitrate = 256000; }
+
+        var url = buildUrl(server, "/Audio/" + itemId + "/stream.mp3") + "?audioBitRate=" + bitrate.toString() + "&deviceId=open-player";
 
         var options = {
             :method => Communications.HTTP_REQUEST_METHOD_GET,

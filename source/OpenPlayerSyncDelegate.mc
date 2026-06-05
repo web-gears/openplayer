@@ -109,7 +109,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
 
         for (var i = 0; i < _remoteTracks.size(); i++) {
             var remote = _remoteTracks[i] as Dictionary;
-            if (remote == null) { continue; }
             var remoteId = remote["id"] != null ? remote["id"].toString() : "";
             if (localIds[remoteId]) {
                 _finalTrackList.add(remote);
@@ -176,7 +175,12 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                 Communications.notifySyncProgress(progress);
             }
             
-            _client.downloadAndSaveTrack(cachedDict["serverId"] as String, method(:onTrackDownloaded));
+            var bitrate = 256000;
+            var dur = getTrackValueNum(cachedDict, "durationSeconds");
+            if (dur != null && dur > 1200) {
+                bitrate = 128000;
+            }
+            _client.downloadAndSaveTrack(cachedDict["serverId"] as String, method(:onTrackDownloaded), bitrate);
         } else {
             _currentTrackIndex++;
             
@@ -186,48 +190,74 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
     }
 
+    private function getTrackValue(track, key as String) as String? {
+        if (track instanceof JellyfinTrack) {
+            var jt = track as JellyfinTrack;
+            if (key.equals("name")) { return jt.name; }
+            if (key.equals("artistName")) { return jt.artistName; }
+            if (key.equals("albumName")) { return jt.albumName; }
+            if (key.equals("id")) { return jt.id != null ? jt.id.toString() : null; }
+            if (key.equals("downloadSize")) { return jt.downloadSize.toString(); }
+            if (key.equals("durationSeconds")) { return jt.durationSeconds.toString(); }
+            return null;
+        }
+        if (track instanceof Dictionary) {
+            var dict = track as Dictionary;
+            if (key.equals("name")) { return dict["name"] as String?; }
+            if (key.equals("artistName")) { return dict["artistName"] as String?; }
+            if (key.equals("albumName")) { return dict["albumName"] as String?; }
+            if (key.equals("id")) { var v = dict["id"]; return v != null ? v.toString() : null; }
+            if (key.equals("downloadSize")) { var v = dict["downloadSize"]; return v != null ? v.toString() : null; }
+            if (key.equals("durationSeconds")) { var v = dict["durationSeconds"]; return v != null ? v.toString() : null; }
+            if (key.equals("serverId")) { var v = dict["serverId"]; return v != null ? v.toString() : null; }
+            if (key.equals("playlistId")) { var v = dict["playlistId"]; return v != null ? v.toString() : null; }
+            return null;
+        }
+        return null;
+    }
+
+    private function getTrackValueNum(track, key as String) as Number? {
+        var val = getTrackValue(track, key);
+        if (val != null) { return val.toNumber(); }
+        return null;
+    }
+
     function onTrackDownloaded(responseCode as Number, data as Null or Dictionary or String or PersistedContent.Iterator) as Void {
-        Application.Storage.setValue("debug_last_rsp", responseCode.toString());
-        Application.Storage.setValue("debug_track_idx", _currentTrackIndex.toString());
-
-        if (responseCode == 200 && data != null) {
-            var cachedDict = _syncTracksQueue[_currentTrackIndex];
-
-            if (data instanceof PersistedContent.Iterator) {
-                var items = [];
-                var iterator = data as PersistedContent.Iterator;
-                var content = iterator.next();
-                while (content instanceof Media.Content) {
-                    items.add(content);
-                    content = iterator.next();
-                }
-
-                Application.Storage.setValue("debug_items_count", items.size().toString());
-
-                for (var i = 0; i < items.size(); i++) {
-                    if (cachedDict != null) {
-                        var metadata = new Media.ContentMetadata();
-                        metadata.title = cachedDict["name"] as String;
-                        metadata.artist = cachedDict["artistName"] as String;
-                        metadata.album = cachedDict["albumName"] as String;
-                        items[i].setMetadata(metadata);
+        if (responseCode != 200) {
+            var failedTrack = _syncTracksQueue[_currentTrackIndex];
+            if (failedTrack != null) {
+                var failedId = getTrackValue(failedTrack, "id");
+                var newFinalList = [];
+                for (var i = 0; i < _finalTrackList.size(); i++) {
+                    var t = _finalTrackList[i] as Dictionary;
+                    if (t != null) {
+                        var tid = t["id"] != null ? t["id"].toString() : "";
+                        if (failedId == null || !tid.equals(failedId)) {
+                            newFinalList.add(t);
+                        }
                     }
                 }
-            } else if (data instanceof Media.ContentRef && cachedDict != null) {
-                var cRef = data as Media.ContentRef;
-                var contentObj = Media.getCachedContentObj(cRef);
+                _finalTrackList = newFinalList;
+            }
+        } else if (responseCode == 200 && data != null) {
+            var cachedDict = _syncTracksQueue[_currentTrackIndex];
+            if (cachedDict != null) {
+                var trackId = cachedDict["id"] != null ? cachedDict["id"].toString() : null;
+                if (trackId != null) {
+                    Application.Storage.setValue("tr_" + trackId, data.toString());
+                }
+                var contentObj = Media.getCachedContentObj(data as Media.ContentRef);
                 if (contentObj instanceof Media.Content) {
                     var metadata = new Media.ContentMetadata();
-                    metadata.title = cachedDict["name"] as String;
-                    metadata.artist = cachedDict["artistName"] as String;
-                    metadata.album = cachedDict["albumName"] as String;
+                    metadata.title = getTrackValue(cachedDict, "name");
+                    metadata.artist = getTrackValue(cachedDict, "artistName");
+                    metadata.album = getTrackValue(cachedDict, "albumName");
                     contentObj.setMetadata(metadata);
                 }
             }
         }
 
         _currentTrackIndex++;
-        Application.Storage.setValue("debug_done_count", _currentTrackIndex.toString());
 
         if (_currentTrackIndex >= _syncTracksQueue.size()) {
             finalizeSync();

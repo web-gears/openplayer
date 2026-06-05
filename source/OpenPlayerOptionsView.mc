@@ -8,6 +8,7 @@ class OpenPlayerOptionsView extends WatchUi.View {
     private var _options as Array = [];
     private var _selectedIndex as Number = 0;
     private var _playlistId as String?;
+    private var _pendingPopAfterConfirm as Boolean = false;
 
     function initialize() {
         View.initialize();
@@ -18,6 +19,10 @@ class OpenPlayerOptionsView extends WatchUi.View {
     }
 
     function onShow() as Void {
+        if (_pendingPopAfterConfirm) {
+            _pendingPopAfterConfirm = false;
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+        }
     }
 
     function setOptions(options as Array) as Void {
@@ -146,26 +151,21 @@ class OpenPlayerOptionsView extends WatchUi.View {
                 new AboutDelegate(),
                 WatchUi.SLIDE_IMMEDIATE
             );
-        } else if (label.equals("Clear App Data")) {
-            var confirmView = new ConfirmActionView("Clear all data?");
+        } else if (label.equals("Clear All Downloads")) {
+            var confirmView = new ConfirmActionView("Clear all downloads?");
             WatchUi.pushView(
                 confirmView,
-                new ConfirmActionDelegate(confirmView, new Lang.Method(self, :onConfirmClearAllData)),
+                new ConfirmActionDelegate(confirmView, new Lang.Method(self, :onConfirmClearDownloads)),
                 WatchUi.SLIDE_IMMEDIATE
             );
         }
     }
 
-    function onConfirmClearAllData() as Void {
+    function onConfirmClearDownloads() as Void {
         var storage = new StorageManager();
-        storage.clearAllData();
-        var wizardView = new SettingsWizardView();
-        WatchUi.switchToView(
-            wizardView,
-            new SettingsWizardDelegate(wizardView),
-            WatchUi.SLIDE_IMMEDIATE
-        );
-        WatchUi.showToast("All data and cached audio cleared", null);
+        storage.clearDownloads();
+        WatchUi.showToast("Downloads cleared", null);
+        _pendingPopAfterConfirm = true;
     }
 
     function onConfirmRemovePlaylist() as Void {
@@ -184,16 +184,8 @@ class OpenPlayerOptionsView extends WatchUi.View {
             }
             storage.saveSyncedTracks(remaining);
             storage.setPendingRemovePlaylistId(null);
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            var currentViews = WatchUi.getCurrentView();
-            if (currentViews != null && currentViews.size() > 0) {
-                var cv = currentViews[0];
-                if (cv instanceof OpenPlayerConfigurePlaybackView) {
-                    (cv as OpenPlayerConfigurePlaybackView).loadData();
-                    (cv as OpenPlayerConfigurePlaybackView).setMode("playlists");
-                }
-            }
-            WatchUi.requestUpdate();
+            WatchUi.showToast("Playlist removed", null);
+            _pendingPopAfterConfirm = true;
         }
     }
 
@@ -217,9 +209,9 @@ class OpenPlayerOptionsView extends WatchUi.View {
             }
             storage.saveCurrentTrackIndex(newIdx);
             storage.savePlaybackTrackSelection(newIdx);
+            WatchUi.showToast("Track removed", null);
         }
-        WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-        WatchUi.requestUpdate();
+        _pendingPopAfterConfirm = true;
     }
 }
 

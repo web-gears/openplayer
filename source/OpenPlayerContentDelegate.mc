@@ -2,15 +2,12 @@ import Toybox.Lang;
 import Toybox.Media;
 
 class OpenPlayerContentDelegate extends Media.ContentDelegate {
-    private var mIterator;
-
     function initialize() {
         ContentDelegate.initialize();
-        mIterator = new OpenPlayerContentIterator();
     }
 
     function getContentIterator() {
-        return mIterator;
+        return new OpenPlayerContentIterator();
     }
 
     function resetContentIterator() as ContentIterator? {

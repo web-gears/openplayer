@@ -178,7 +178,7 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         }
 
         options.add("About");
-        options.add("Clear App Data");
+        options.add("Clear All Downloads");
 
         var optionsView = new OpenPlayerOptionsView();
         optionsView.setOptions(options);

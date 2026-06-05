@@ -354,14 +354,9 @@ class StorageManager {
         Storage.deleteValue("synced_tracks");
     }
 
-    function clearAllData() as Void {
+    function clearDownloads() as Void {
         purgeAllCachedAudio();
 
-        Storage.deleteValue("jellyfin_server");
-        Storage.deleteValue("jellyfin_apikey");
-        Storage.deleteValue("jellyfin_apikey_direct");
-        Storage.deleteValue("jellyfin_token");
-        Storage.deleteValue("jellyfin_userId");
         Storage.deleteValue("sync_state");
         Storage.deleteValue("synced_tracks_str");
         Storage.deleteValue("synced_tracks");
@@ -384,15 +379,6 @@ class StorageManager {
         Storage.deleteValue("default_playlist_id");
         Storage.deleteValue("active_playlist_id");
         Storage.deleteValue("pending_playlist_id");
-        Storage.deleteValue("debug_last_rsp");
-        Storage.deleteValue("debug_track_idx");
-        Storage.deleteValue("debug_items_count");
-        Storage.deleteValue("debug_done_count");
-        Storage.deleteValue("db_ci_ref_count");
-        Storage.deleteValue("db_ci_ref_ids");
-        Storage.deleteValue("db_ci_get_idx");
-        Storage.deleteValue("db_ci_get_result");
-        Storage.deleteValue("db_ci_get_refid");
     }
 
     function purgeAllCachedAudio() as Void {
@@ -479,7 +465,6 @@ class StorageManager {
         var parts = [];
         for (var i = 0; i < tracks.size(); i++) {
             var t = tracks[i];
-            var dict = t as Dictionary;
             var id = "";
             var serverId = "";
             var name = "";
@@ -489,16 +474,17 @@ class StorageManager {
             var downloadSize = 0;
             var playlistId = "";
 
-            if (dict != null) {
-                id = dict["id"];
-                serverId = dict["serverId"] as String?;
-                name = dict["name"] as String?;
-                albumName = dict["albumName"] as String?;
-                artistName = dict["artistName"] as String?;
-                durationSeconds = dict["durationSeconds"] as Number?;
-                downloadSize = dict["downloadSize"] as Number?;
-                playlistId = dict["playlistId"] as String?;
-            } else {
+            if (t instanceof Dictionary) {
+                var dict = t as Dictionary;
+                id = dict.get("id");
+                serverId = dict.get("serverId") as String?;
+                name = dict.get("name") as String?;
+                albumName = dict.get("albumName") as String?;
+                artistName = dict.get("artistName") as String?;
+                durationSeconds = dict.get("durationSeconds") as Number?;
+                downloadSize = dict.get("downloadSize") as Number?;
+                playlistId = dict.get("playlistId") as String?;
+            } else if (t instanceof JellyfinTrack) {
                 var track = t as JellyfinTrack;
                 id = track.id;
                 serverId = track.serverId;
@@ -598,18 +584,29 @@ class StorageManager {
         return tracks;
     }
 
-    function saveSyncTrackQueue(queue as Array) as Void {
+     function saveSyncTrackQueue(queue as Array) as Void {
         var parts = [];
         for (var i = 0; i < queue.size(); i++) {
-            var dict = queue[i] as Dictionary;
-            var id = dict["id"] != null ? dict["id"].toString() : "";
-            var serverId = dict["serverId"] != null ? dict["serverId"] as String? : "";
-            var name = dict["name"] != null ? dict["name"] as String? : "";
-            var albumName = dict["albumName"] != null ? dict["albumName"] as String? : "";
-            var artistName = dict["artistName"] != null ? dict["artistName"] as String? : "";
-            var durationSeconds = dict["durationSeconds"] != null ? dict["durationSeconds"].toString() : "0";
-            var downloadSize = dict["downloadSize"] != null ? dict["downloadSize"].toString() : "0";
-            var playlistId = dict["playlistId"] != null ? dict["playlistId"] as String? : "";
+            var t = queue[i];
+            var id = "";
+            var serverId = "";
+            var name = "";
+            var albumName = "";
+            var artistName = "";
+            var durationSeconds = "0";
+            var downloadSize = "0";
+            var playlistId = "";
+            if (t instanceof Dictionary) {
+                var dict = t as Dictionary;
+                id = dict.get("id") != null ? dict.get("id").toString() : "";
+                serverId = dict.get("serverId") != null ? dict.get("serverId") as String? : "";
+                name = dict.get("name") != null ? dict.get("name") as String? : "";
+                albumName = dict.get("albumName") != null ? dict.get("albumName") as String? : "";
+                artistName = dict.get("artistName") != null ? dict.get("artistName") as String? : "";
+                durationSeconds = dict.get("durationSeconds") != null ? dict.get("durationSeconds").toString() : "0";
+                downloadSize = dict.get("downloadSize") != null ? dict.get("downloadSize").toString() : "0";
+                playlistId = dict.get("playlistId") != null ? dict.get("playlistId") as String? : "";
+            }
 
             parts.add(
                 id + TRACK_DELIM + serverId + TRACK_DELIM + name +

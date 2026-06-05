@@ -16,19 +16,12 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
         ContentIterator.initialize();
         _storage = new StorageManager();
         _shuffleOrder = [];
-        Application.Storage.setValue("db_ci_init", 1);
         loadTracks();
-        Application.Storage.setValue("db_ci_done_tracks", _tracks.size());
-        Application.Storage.setValue("db_ci_done_refs", _contentRefs.size());
     }
 
     function loadTracks() as Void {
         var allTracks = _storage.loadSyncedTracks();
         var activePlaylistId = _storage.getActivePlaylistId();
-
-        var allCount = allTracks == null ? 0 : allTracks.size();
-        Application.Storage.setValue("db_ci_all", allCount);
-        Application.Storage.setValue("db_ci_playlist", activePlaylistId);
 
         _tracks = [];
         _contentRefs = [];
@@ -45,8 +38,7 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
             }
         }
 
-        Application.Storage.setValue("db_ci_filtered", _tracks.size());
-        refreshContentRefs();
+        refreshContentRefs(allTracks);
 
         _currentIndex = _storage.getPlaybackPosition();
         if (_currentIndex >= _tracks.size()) {
@@ -58,38 +50,69 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
         }
     }
 
-    private function refreshContentRefs() as Void {
+    private function refreshContentRefs(allTracks as Array) as Void {
         _contentRefs = [];
-        Application.Storage.setValue("db_ci_ref_count", 0);
         for (var i = 0; i < _tracks.size(); i++) {
             _contentRefs.add(null);
         }
 
+        var allRefs = [];
+        var allMetas = [];
         var iter = Media.getContentRefIter({:contentType => Media.CONTENT_TYPE_AUDIO});
         if (iter != null) {
             var ref = iter.next();
             while (ref != null) {
+                var meta = null;
                 var content = Media.getCachedContentObj(ref) as Media.Content?;
                 if (content != null) {
-                    var meta = content.getMetadata();
-                    for (var i = 0; i < _tracks.size(); i++) {
-                        if (_contentRefs[i] != null) { continue; }
-                        var track = _tracks[i] as JellyfinTrack;
-                        if (meta.title != null && meta.title.equals(track.name)) {
-                            _contentRefs[i] = ref;
-                            break;
-                        }
-                    }
+                    meta = content.getMetadata();
                 }
+                allRefs.add(ref);
+                allMetas.add(meta);
                 ref = iter.next();
             }
         }
 
-        var count = 0;
-        for (var i = 0; i < _contentRefs.size(); i++) {
-            if (_contentRefs[i] != null) { count++; }
+        for (var i = 0; i < allRefs.size(); i++) {
+            var meta = allMetas[i] as Media.ContentMetadata?;
+            if (meta == null || meta.title == null) { continue; }
+            for (var j = 0; j < _tracks.size(); j++) {
+                if (_contentRefs[j] != null) { continue; }
+                var track = _tracks[j] as JellyfinTrack;
+                if (track != null && meta.title.equals(track.name)) {
+                    _contentRefs[j] = allRefs[i] as Media.ContentRef;
+                    break;
+                }
+            }
         }
-        Application.Storage.setValue("db_ci_ref_count", count);
+
+        for (var i = 0; i < _tracks.size(); i++) {
+            if (_contentRefs[i] != null) { continue; }
+            var track = _tracks[i] as JellyfinTrack;
+            var storedRefId = Storage.getValue("tr_" + track.id.toString()) as String?;
+            if (storedRefId == null) { continue; }
+            for (var j = 0; j < allRefs.size(); j++) {
+                if (allRefs[j].getId().equals(storedRefId)) {
+                    _contentRefs[i] = allRefs[j] as Media.ContentRef;
+                    break;
+                }
+            }
+        }
+
+        for (var i = 0; i < _tracks.size(); i++) {
+            if (_contentRefs[i] != null) { continue; }
+            var track = _tracks[i] as JellyfinTrack;
+            for (var j = 0; j < allTracks.size(); j++) {
+                var fullTrack = allTracks[j] as JellyfinTrack;
+                if (fullTrack.name != null && fullTrack.name.equals(track.name)) {
+                    if (j < allRefs.size()) {
+                        _contentRefs[i] = allRefs[j] as Media.ContentRef;
+                    }
+                    break;
+                }
+            }
+        }
+
     }
 
     private function generateShuffleOrder() as Void {
@@ -113,60 +136,53 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
         return _currentIndex;
     }
 
-    function canSkip() as Boolean {
-        return true;
-    }
-
     function get() as Content? {
-        Application.Storage.setValue("db_ci_get_idx", _currentIndex);
-
         if (_currentIndex >= _tracks.size()) {
-            Application.Storage.setValue("db_ci_get_result", -1); // no tracks
             return null;
         }
 
         if (_currentIndex >= _contentRefs.size()) {
-            Application.Storage.setValue("db_ci_get_result", -2); // no ref at index
             _currentIndex++;
             return null;
         }
 
         var contentRef = _contentRefs[_currentIndex] as Media.ContentRef?;
         if (contentRef == null) {
-            Application.Storage.setValue("db_ci_get_result", -3); // null ref
             _currentIndex++;
             return null;
         }
-        var refId = contentRef.getId();
-        Application.Storage.setValue("db_ci_get_refid", refId);
 
         var contentItem = Media.getCachedContentObj(contentRef) as Media.Content?;
 
         if (!(contentItem instanceof Media.Content)) {
-            Application.Storage.setValue("db_ci_get_result", -4); // cached obj null
             _currentIndex++;
             return null;
         }
 
-        Application.Storage.setValue("db_ci_get_result", 1); // success
         return contentItem;
     }
 
     function getPlaybackProfile() as PlaybackProfile? {
         var profile = new Media.PlaybackProfile();
         profile.playbackControls = [
-            PLAYBACK_CONTROL_SKIP_FORWARD,
-            PLAYBACK_CONTROL_SKIP_BACKWARD,
-            PLAYBACK_CONTROL_PREVIOUS,
-            PLAYBACK_CONTROL_NEXT,
-            PLAYBACK_CONTROL_VOLUME,
+            Media.PLAYBACK_CONTROL_SKIP_FORWARD,
+            Media.PLAYBACK_CONTROL_SKIP_BACKWARD,
+            Media.PLAYBACK_CONTROL_PREVIOUS,
+            Media.PLAYBACK_CONTROL_NEXT,
+            Media.PLAYBACK_CONTROL_VOLUME,
         ];
         if (profile has :playbackCapabilities) {
             profile.playbackCapabilities = 1;
         }
-        profile.playbackNotificationThreshold = 1;
-        profile.requirePlaybackNotification = false;
-        profile.skipPreviousThreshold = null;
+        if (profile has :playbackNotificationThreshold) {
+            profile.playbackNotificationThreshold = 1;
+        }
+        if (profile has :requirePlaybackNotification) {
+            profile.requirePlaybackNotification = false;
+        }
+        if (profile has :skipPreviousThreshold) {
+            profile.skipPreviousThreshold = null;
+        }
         return profile;
     }
 
@@ -176,7 +192,6 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
             _tracks.size() == 0 ||
             _currentIndex >= _tracks.size()
         ) {
-            Application.Storage.setValue("db_ci_next_null", _currentIndex);
             return null;
         }
 
@@ -219,6 +234,10 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
             _currentIndex = _currentIndex - 1;
         }
         return get();
+    }
+
+    function canSkip() as Boolean {
+        return true;
     }
 
     function shuffling() as Boolean {
