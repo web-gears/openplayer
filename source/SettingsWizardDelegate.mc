@@ -5,46 +5,6 @@ import Toybox.System;
 import Toybox.Application;
 import Toybox.Timer;
 
-class UrlPickerDelegate extends WatchUi.TextPickerDelegate {
-    private var _storage as StorageManager;
-
-    function initialize(storage as StorageManager) {
-        TextPickerDelegate.initialize();
-        _storage = storage;
-    }
-
-    function onTextEntered(text as String, changed as Boolean) as Boolean {
-        if (changed && text.length() > 0) {
-            _storage.setServer(text);
-        }
-        return true;
-    }
-
-    function onCancel() as Boolean {
-        return true;
-    }
-}
-
-class ApiKeyPickerDelegate extends WatchUi.TextPickerDelegate {
-    private var _storage as StorageManager;
-
-    function initialize(storage as StorageManager) {
-        TextPickerDelegate.initialize();
-        _storage = storage;
-    }
-
-    function onTextEntered(text as String, changed as Boolean) as Boolean {
-        if (changed && text.length() > 0) {
-            _storage.setApiKey(text);
-        }
-        return true;
-    }
-
-    function onCancel() as Boolean {
-        return true;
-    }
-}
-
 class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     private var _view as SettingsWizardView;
     private var _storage as StorageManager;
@@ -62,7 +22,7 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     private static const STEP_CHOICE = 10;
     private static const STEP_QR_LOADING = 11;
     private static const STEP_QR_DISPLAY = 12;
-    private static const STEP_ENTER_DATA = 1;
+    private static const STEP_GCM_INFO = 5;
     private static const STEP_REVIEW = 3;
     private static const STEP_DONE = 4;
 
@@ -75,15 +35,6 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
         _apiKey = _storage.getApiKey();
         _isActive = true;
         _attemptCount = 0;
-
-        if (_serverUrl != null && _serverUrl.length() > 0) {
-            _view.setServerUrlFilled(true);
-            _view.setServerUrl(_serverUrl);
-        }
-        if (_apiKey != null && _apiKey.length() > 0) {
-            _view.setApiKeyFilled(true);
-            _view.setApiKey(_apiKey);
-        }
     }
 
     function onHide() as Void {
@@ -96,19 +47,6 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
 
     function onShow() as Void {}
 
-    private function refreshFilledFlags() as Void {
-        var server = _storage.getServer();
-        var apiKey = _storage.getApiKey();
-        _view.setServerUrlFilled(server.length() > 0);
-        _view.setApiKeyFilled(apiKey.length() > 0);
-        if (apiKey.length() > 0) {
-            _view.setApiKey(apiKey);
-        }
-        if (server.length() > 0) {
-            _view.setServerUrl(server);
-        }
-    }
-
     function onKey(evt) as Lang.Boolean {
         var step = _view.getStep();
         var key = evt.getKey();
@@ -118,8 +56,7 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
                 startQrFlow();
                 return true;
             } else if (key == WatchUi.KEY_DOWN) {
-                _view.setStep(STEP_ENTER_DATA);
-                refreshFilledFlags();
+                _view.setStep(STEP_GCM_INFO);
                 return true;
             }
             return false;
@@ -131,12 +68,10 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
                     _tickTimer.stop();
                     _tickTimer = null;
                 }
-                _isActive = false;
-                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+                _view.setStep(STEP_CHOICE);
                 return true;
             } else if (key == WatchUi.KEY_ENTER) {
-                _view.setStep(STEP_ENTER_DATA);
-                refreshFilledFlags();
+                _view.setStep(STEP_GCM_INFO);
                 return true;
             }
             return false;
@@ -148,77 +83,41 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
                 return true;
             } else if (key == WatchUi.KEY_ESC) {
                 _view.setStep(STEP_CHOICE);
-                _view.setMessage("Choose method");
                 return true;
             }
             return false;
         }
 
-        if (key == WatchUi.KEY_START) {
-            if (step == STEP_CHOICE) {
-                _view.setStep(STEP_ENTER_DATA);
-                refreshFilledFlags();
-                return true;
-            } else if (step == STEP_DONE) {
-                _isActive = false;
-                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+        if (step == STEP_GCM_INFO) {
+            if (key == WatchUi.KEY_ESC) {
+                _view.setStep(STEP_CHOICE);
                 return true;
             }
+            return false;
         }
 
         if (key == WatchUi.KEY_LAP) {
-            if (step == STEP_CHOICE) {
-                _view.setStep(STEP_ENTER_DATA);
-                refreshFilledFlags();
-                return true;
-            } else if (step == STEP_ENTER_DATA) {
-                _isActive = false;
-                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-                return true;
-            } else if (step == STEP_DONE) {
+            if (step == STEP_DONE) {
                 _isActive = false;
                 WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
                 return true;
             }
         }
 
-        if (key == WatchUi.KEY_UP) {
-            if (step == STEP_ENTER_DATA) {
-                openUrlPicker();
-                return true;
-            }
-        } else if (key == WatchUi.KEY_DOWN) {
-            if (step == STEP_ENTER_DATA) {
-                openApiKeyPicker();
-                return true;
-            }
-        } else if (key == WatchUi.KEY_ESC) {
+        if (key == WatchUi.KEY_ESC) {
             if (step == STEP_REVIEW) {
-                _view.setStep(STEP_ENTER_DATA);
-                _view.clearError();
-                refreshFilledFlags();
-                return true;
-            } else if (step > 1 && step != STEP_REVIEW) {
-                _view.setStep(step - 1);
+                _view.setStep(STEP_CHOICE);
                 _view.clearError();
                 return true;
-            } else if (step == STEP_ENTER_DATA) {
+            } else if (step == STEP_CHOICE) {
                 _isActive = false;
                 WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
                 return true;
-            } else {
-                return false;
             }
-        } else if (key == WatchUi.KEY_ENTER) {
-            if (step == STEP_ENTER_DATA) {
-                if (_serverUrl.length() == 0 && _apiKey.length() == 0) {
-                    _view.setError("Enter at least one");
-                    return true;
-                }
-                _view.setStep(STEP_REVIEW);
-                _view.setMessage("Credentials updated");
-                return true;
-            } else if (step == STEP_REVIEW) {
+        }
+
+        if (key == WatchUi.KEY_ENTER) {
+            if (step == STEP_REVIEW) {
                 saveSettings();
                 return true;
             } else if (step == STEP_DONE) {
@@ -338,23 +237,23 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             createSession();
         } else if (responseCode == -400) {
             _view.setStep(STEP_QR_LOADING);
-            _view.setError("Service unavailable\nENTER: manual");
+            _view.setError("Service unavailable\nESC: back");
         } else if (responseCode < 0) {
             _view.setStep(STEP_QR_LOADING);
             if (responseCode == -200) {
-                _view.setError("No internet\nENTER: manual");
+                _view.setError("No internet\nESC: back");
             } else if (responseCode == -201) {
-                _view.setError("SSL error\nENTER: manual");
+                _view.setError("SSL error\nESC: back");
             } else if (responseCode == -104) {
-                _view.setError("Connection timeout\nENTER: manual");
+                _view.setError("Connection timeout\nESC: back");
             } else if (responseCode == -105) {
-                _view.setError("Server not found\nENTER: manual");
+                _view.setError("Server not found\nESC: back");
             } else {
-                _view.setError("Network error\nENTER: manual");
+                _view.setError("Network error\nESC: back");
             }
         } else {
             _view.setStep(STEP_QR_LOADING);
-            _view.setError("Service unavailable\nENTER: manual");
+            _view.setError("Service unavailable\nESC: back");
         }
     }
 
@@ -397,7 +296,7 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
                 if (serverUrlVal != null && apiKeyVal != null) {
                     _serverUrl = serverUrlVal;
                     _apiKey = apiKeyVal;
-                    _view.setStep(3);
+                    _view.setStep(STEP_REVIEW);
                     _view.setServerUrl(_serverUrl);
                     _view.setServerUrlFilled(true);
                     _view.setApiKey(_apiKey);
@@ -407,26 +306,26 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             }
             _view.setStep(STEP_QR_DISPLAY);
             _view.setError(
-                "Invalid data received\nMENU: retry | ESC: back | ENTER: manual"
+                "Invalid data received\nENTER: retry | ESC: back"
             );
         } else if (responseCode < 0) {
             if (responseCode == -104) {
                 _view.setError(
-                    "Connection timeout\nMENU: retry | ESC: back | ENTER: manual"
+                    "Connection timeout\nENTER: retry | ESC: back"
                 );
             } else if (responseCode == -105) {
                 _view.setError(
-                    "Server not found\nMENU: retry | ESC: back | ENTER: manual"
+                    "Server not found\nENTER: retry | ESC: back"
                 );
             } else {
                 _view.setError(
-                    "Network error\nMENU: retry | ESC: back | ENTER: manual"
+                    "Network error\nENTER: retry | ESC: back"
                 );
             }
         } else {
             _view.setStep(STEP_QR_DISPLAY);
             _view.setError(
-                "Cannot fetch data\nMENU: retry | ESC: back | ENTER: manual"
+                "Cannot fetch data\nENTER: retry | ESC: back"
             );
         }
         WatchUi.requestUpdate();
@@ -485,36 +384,5 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             _storage.savePendingPlaylistCounts(counts);
             _storage.savePendingPlaylistResponseCode(responseCode);
         }
-    }
-
-    function startSync() as Void {
-        var syncView = new OpenPlayerConfigureSyncView();
-        var syncDelegate = new OpenPlayerConfigureSyncDelegate(syncView);
-        WatchUi.switchToView(
-            syncView,
-            syncDelegate,
-            WatchUi.SLIDE_IMMEDIATE
-        );
-        syncDelegate.onShow();
-    }
-
-    function openUrlPicker() as Void {
-        var currentUrl = _storage.getServer();
-        var picker = new WatchUi.TextPicker(currentUrl);
-        WatchUi.pushView(
-            picker,
-            new UrlPickerDelegate(_storage),
-            WatchUi.SLIDE_IMMEDIATE
-        );
-    }
-
-    function openApiKeyPicker() as Void {
-        var currentKey = _storage.getApiKey();
-        var picker = new WatchUi.TextPicker(currentKey);
-        WatchUi.pushView(
-            picker,
-            new ApiKeyPickerDelegate(_storage),
-            WatchUi.SLIDE_IMMEDIATE
-        );
     }
 }

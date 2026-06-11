@@ -1,0 +1,4 @@
+<properties>
+    <property id="jellyfin_server" type="string" />
+    <property id="jellyfin_apikey" type="string" />
+</properties>

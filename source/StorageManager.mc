@@ -46,9 +46,9 @@ class StorageManager {
     }
 
     function isConfigured() as Boolean {
-        var server = Storage.getValue("jellyfin_server") as String?;
-        var apiKey = Storage.getValue("jellyfin_apikey") as String?;
-        return server != null && apiKey != null;
+        var server = getServer();
+        var apiKey = getApiKey();
+        return server.length() > 0 && apiKey.length() > 0;
     }
 
     function getDefaultPlaylistId() as String? {
@@ -76,9 +76,6 @@ class StorageManager {
             cleanUrl = cleanUrl.substring(8, cleanUrl.length());
         }
         var slashPos = indexOf2(cleanUrl, "/");
-        if (slashPos < 0) {
-            slashPos = indexOf2(cleanUrl, ":");
-        }
         if (slashPos >= 0) {
             cleanUrl = cleanUrl.substring(0, slashPos);
         }
@@ -86,6 +83,10 @@ class StorageManager {
     }
 
     function getServer() as String {
+        var propsUrl = Application.Properties.getValue("jellyfin_server") as String?;
+        if (propsUrl != null && propsUrl.length() > 0) {
+            return propsUrl;
+        }
         var url = Storage.getValue("jellyfin_server") as String?;
         return url == null ? "" : url;
     }
@@ -119,6 +120,10 @@ class StorageManager {
     }
 
     function getApiKey() as String {
+        var propsKey = Application.Properties.getValue("jellyfin_apikey") as String?;
+        if (propsKey != null && propsKey.length() > 0) {
+            return propsKey;
+        }
         var obfuscated = Storage.getValue("jellyfin_apikey") as String?;
         if (obfuscated == null) {
             return "";
@@ -134,6 +139,10 @@ class StorageManager {
     }
 
     function getApiKeyDirect() as String? {
+        var propsKey = Application.Properties.getValue("jellyfin_apikey") as String?;
+        if (propsKey != null && propsKey.length() > 0) {
+            return propsKey;
+        }
         return Storage.getValue("jellyfin_apikey_direct") as String?;
     }
 
@@ -476,14 +485,14 @@ class StorageManager {
 
             if (t instanceof Dictionary) {
                 var dict = t as Dictionary;
-                id = dict.get("id");
-                serverId = dict.get("serverId") as String?;
-                name = dict.get("name") as String?;
-                albumName = dict.get("albumName") as String?;
-                artistName = dict.get("artistName") as String?;
-                durationSeconds = dict.get("durationSeconds") as Number?;
-                downloadSize = dict.get("downloadSize") as Number?;
-                playlistId = dict.get("playlistId") as String?;
+                id = dict["id"] as String?;
+                serverId = dict["serverId"] as String?;
+                name = dict["name"] as String?;
+                albumName = dict["albumName"] as String?;
+                artistName = dict["artistName"] as String?;
+                durationSeconds = dict["durationSeconds"] as Number?;
+                downloadSize = dict["downloadSize"] as Number?;
+                playlistId = dict["playlistId"] as String?;
             } else if (t instanceof JellyfinTrack) {
                 var track = t as JellyfinTrack;
                 id = track.id;
@@ -598,14 +607,14 @@ class StorageManager {
             var playlistId = "";
             if (t instanceof Dictionary) {
                 var dict = t as Dictionary;
-                id = dict.get("id") != null ? dict.get("id").toString() : "";
-                serverId = dict.get("serverId") != null ? dict.get("serverId") as String? : "";
-                name = dict.get("name") != null ? dict.get("name") as String? : "";
-                albumName = dict.get("albumName") != null ? dict.get("albumName") as String? : "";
-                artistName = dict.get("artistName") != null ? dict.get("artistName") as String? : "";
-                durationSeconds = dict.get("durationSeconds") != null ? dict.get("durationSeconds").toString() : "0";
-                downloadSize = dict.get("downloadSize") != null ? dict.get("downloadSize").toString() : "0";
-                playlistId = dict.get("playlistId") != null ? dict.get("playlistId") as String? : "";
+                id = dict["id"] != null ? dict["id"].toString() : "";
+                serverId = dict["serverId"] != null ? dict["serverId"] as String? : "";
+                name = dict["name"] != null ? dict["name"] as String? : "";
+                albumName = dict["albumName"] != null ? dict["albumName"] as String? : "";
+                artistName = dict["artistName"] != null ? dict["artistName"] as String? : "";
+                durationSeconds = dict["durationSeconds"] != null ? dict["durationSeconds"].toString() : "0";
+                downloadSize = dict["downloadSize"] != null ? dict["downloadSize"].toString() : "0";
+                playlistId = dict["playlistId"] != null ? dict["playlistId"] as String? : "";
             }
 
             parts.add(

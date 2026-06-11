@@ -23,7 +23,7 @@ class SettingsWizardView extends WatchUi.View {
     private static const STEP_CHOICE = 10;
     private static const STEP_QR_LOADING = 11;
     private static const STEP_QR_DISPLAY = 12;
-    private static const STEP_ENTER_DATA = 1;
+    private static const STEP_GCM_INFO = 5;
     private static const STEP_REVIEW = 3;
     private static const STEP_DONE = 4;
 
@@ -62,7 +62,7 @@ class SettingsWizardView extends WatchUi.View {
 
         if (_step == STEP_CHOICE) {
             dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 10), Graphics.FONT_MEDIUM, "UP: QR code", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 25), Graphics.FONT_MEDIUM, "DOWN: manual", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 25), Graphics.FONT_MEDIUM, "DOWN: phone app", Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_QR_LOADING) {
             dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_MEDIUM, "Creating session...", Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_QR_DISPLAY) {
@@ -108,19 +108,11 @@ class SettingsWizardView extends WatchUi.View {
             var secs = _remainingSeconds % 60;
             var timeStr = mins + ":" + (secs < 10 ? "0" + secs : secs.toString());
             dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 30), Graphics.FONT_XTINY, timeStr + " remaining", Graphics.TEXT_JUSTIFY_CENTER);
-        } else if (_step == STEP_ENTER_DATA) {
-            dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-            var serverLabel = "UP: Server URL";
-            var apiLabel = "DOWN: API Key";
-            if (_serverUrlFilled) {
-                serverLabel = serverLabel + "[ok]";
-            }
-            if (_apiKeyFilled) {
-                apiLabel = apiLabel + "[ok]";
-            }
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 30), Graphics.FONT_MEDIUM, serverLabel, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 10), Graphics.FONT_MEDIUM, apiLabel, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: Review", Graphics.TEXT_JUSTIFY_CENTER);
+        } else if (_step == STEP_GCM_INFO) {
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 30), Graphics.FONT_TINY, "Use Garmin Connect", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 5), Graphics.FONT_TINY, "Mobile app to enter", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 20), Graphics.FONT_TINY, "server URL and API key", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ESC: back", Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_REVIEW) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 100), Graphics.FONT_TINY, "Server:", Graphics.TEXT_JUSTIFY_RIGHT);
@@ -131,7 +123,7 @@ class SettingsWizardView extends WatchUi.View {
                 masked = "****" + _apiKey.substring(_apiKey.length() - 4, _apiKey.length());
             }
             dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 125), Graphics.FONT_TINY, masked, Graphics.TEXT_JUSTIFY_LEFT);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: save\nBACK: edit", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: save\nBACK: back", Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_DONE) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 130), Graphics.FONT_MEDIUM, "[Start Sync]", Graphics.TEXT_JUSTIFY_CENTER);
@@ -250,13 +242,9 @@ private function updateStep() as Void {
         } else if (_step == STEP_QR_DISPLAY) {
             _title = "Scan QR Code";
             _message = "ENTER: confirm";
-        } else if (_step == STEP_ENTER_DATA) {
-            if (_serverUrlFilled || _apiKeyFilled) {
-                _title = "Edit Data";
-            } else {
-                _title = "Enter Data";
-            }
-            _message = "UP/DOWN to choose";
+        } else if (_step == STEP_GCM_INFO) {
+            _title = "Phone App";
+            _message = "Configure in GCM";
         } else if (_step == STEP_REVIEW) {
             _title = "Review";
             _message = "Ready to connect?";

@@ -17,6 +17,10 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
 
     function onStop(state as Dictionary?) as Void {}
 
+    function onSettingsChanged() as Void {
+        WatchUi.requestUpdate();
+    }
+
     function getContentDelegate(playref) as Media.ContentDelegate {
         return new OpenPlayerContentDelegate();
     }

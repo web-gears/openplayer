@@ -1,0 +1,8 @@
+<settings>
+    <setting propertyKey="@Properties.jellyfin_server" title="@Strings.serverTitle">
+        <settingConfig type="alphaNumeric" />
+    </setting>
+    <setting propertyKey="@Properties.jellyfin_apikey" title="@Strings.apiKeyTitle">
+        <settingConfig type="alphaNumeric" />
+    </setting>
+</settings>
