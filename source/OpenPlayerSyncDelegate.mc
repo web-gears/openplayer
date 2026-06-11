@@ -10,8 +10,6 @@ import Toybox.Application;
 class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     private var _storage as StorageManager;
     private var _client as JellyfinClient;
-    private var _playlists as Array = [];
-    private var _pendingPlaylistId as String = "";
     private var _playlistIndexList as Array = [];
     private var _currentTrackIndex as Number = 0;
     private var _currentPlaylistIdx as Number = 0;
@@ -31,7 +29,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _client = new JellyfinClient(_storage);
         _syncTimer = new Timer.Timer();
         _lastSentProgress = -1;
-        _playlists = [];
         _syncTracksQueue = [];
         _remoteTracks = [];
         _finalTrackList = [];
@@ -39,39 +36,34 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     }
 
     function onStartSync() as Void {
-        var server = _storage.getServer();
-        var apiKey = _storage.getApiKey();
-        if (server == null || apiKey == null) {
-            Communications.notifySyncComplete(null);
+        var token = _storage.getAuthToken();
+        if (token == null || token.length() == 0) {
+            _client.authenticateFromSettings(method(:onReAuthResult));
             return;
         }
 
         var syncState = _storage.loadSyncState();
         var selectedIds = syncState.selectedPlaylistIds;
-        if (selectedIds != null && selectedIds.size() > 0) {
-            if (!_storage.canSelectPlaylist(selectedIds.size())) {
-                Communications.notifySyncComplete(null);
-                return;
-            }
-            _playlistIndexList = selectedIds;
-            _client.authenticateWithPlaylistList(selectedIds, method(:onAuthenticatedWithPlaylists));
-        } else {
-            _client.authenticate(method(:onAuthenticated));
-        }
-    }
-
-    function onAuthenticatedWithPlaylists(responseCode as Number, data as Dictionary?) as Void {
-        if (responseCode != 200) {
+        if (selectedIds == null || selectedIds.size() == 0) {
             Communications.notifySyncComplete(null);
             return;
         }
-        
+
+        _playlistIndexList = selectedIds;
         _syncTracksQueue = [];
         _remoteTracks = [];
         _finalTrackList = [];
         _syncTimer.stop();
         _syncTimer = new Timer.Timer();
         _syncTimer.start(method(:onInitialCacheCleared), 100, false);
+    }
+
+    function onReAuthResult(responseCode as Number, data as Dictionary?) as Void {
+        if (responseCode == 200) {
+            onStartSync();
+        } else {
+            Communications.notifySyncComplete(null);
+        }
     }
 
     function onInitialCacheCleared() as Void {
@@ -300,88 +292,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         Communications.notifySyncComplete(null);
     }
 
-    function onAuthenticated(responseCode as Number, data as Dictionary?) as Void {
-        if (responseCode != 200) {
-            Communications.notifySyncComplete(null);
-            return;
-        }
-        _client.getPlaylists(method(:onPlaylistsLoaded));
-    }
-
-    function onAuthenticatedWithPlaylist(responseCode as Number, data as Dictionary?) as Void {
-        if (responseCode != 200) {
-            Communications.notifySyncComplete(null);
-            return;
-        }
-        _syncTimer.stop();
-        _syncTimer = new Timer.Timer();
-        _syncTimer.start(method(:onPlaylistCacheCleared), 100, false);
-    }
-
-    function onPlaylistCacheCleared() as Void {
-        _syncTimer.stop();
-        _syncTracksQueue = [];
-        _remoteTracks = [];
-        _finalTrackList = [];
-        _client.getPlaylistTracks(_pendingPlaylistId, 0, method(:onPlaylistTracksLoaded));
-    }
-
-    function onPlaylistsLoaded(responseCode as Number, data as Dictionary?) as Void {
-        if (responseCode != 200 || data == null) {
-            Communications.notifySyncComplete(null);
-            return;
-        }
-        var items = data["Items"] as Array?;
-        if (items == null || items.size() == 0) {
-            Communications.notifySyncComplete(null);
-            return;
-        }
-        _playlists = items;
-        
-        _syncTimer.stop();
-        _syncTimer = new Timer.Timer();
-        _syncTimer.start(method(:onPlaylistsCacheCleared), 100, false);
-    }
-
-    function onPlaylistsCacheCleared() as Void {
-        _syncTimer.stop();
-        _syncTracksQueue = [];
-        _remoteTracks = [];
-        _finalTrackList = [];
-        fetchTracksFromPlaylist(0);
-    }
-
-    function fetchTracksFromPlaylist(index as Number) as Void {
-        if (index >= _playlists.size()) {
-            finalizeSync();
-            return;
-        }
-        var playlist = _playlists[index] as Dictionary;
-        var playlistId = playlist["Id"] as String;
-        _client.getPlaylistTracks(playlistId, index, method(:onPlaylistTracksLoaded));
-    }
-
-    function onPlaylistTracksLoaded(responseCode as Number, tracks as Array, playlistIndex as Number) as Void {
-        var index = playlistIndex;
-        if (responseCode == 200 && tracks != null) {
-            for (var i = 0; i < tracks.size(); i++) {
-                if (tracks[i] == null) { continue; }
-                var track = tracks[i] as JellyfinTrack;
-                _syncTracksQueue.add({
-                    "id" => track.id,
-                    "serverId" => track.serverId,
-                    "name" => track.name,
-                    "albumName" => track.albumName,
-                    "artistName" => track.artistName,
-                    "durationSeconds" => track.durationSeconds,
-                    "downloadSize" => track.downloadSize,
-                    "playlistId" => track.playlistId
-                });
-            }
-        }
-        fetchTracksFromPlaylist(index + 1);
-    }
-
     function isSyncNeeded() as Boolean {
         return _storage.isConfigured();
     }
@@ -393,13 +303,5 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _finalTrackList = [];
         Communications.cancelAllRequests();
         Communications.notifySyncComplete(null);
-    }
-
-    function onWebResponse(code, data) {
-        if (code == 200) {
-            Communications.notifySyncComplete(null);
-        } else {
-            Communications.notifySyncComplete("Error: " + code.toString());
-        }
     }
 }

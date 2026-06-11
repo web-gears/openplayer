@@ -10,7 +10,6 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     private var _client as JellyfinClient;
     private var _syncState as SyncState;
     private var _currentPlaylistIndex as Number = 0;
-    private var _isActive as Boolean = false;
     private var _pendingResponseCode as Number = -1;
     private var _pendingData as Dictionary?;
 
@@ -24,7 +23,6 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onShow() as Void {
-        _isActive = true;
         if (_storage.isConfigured()) {
             loadPlaylists();
         } else {
@@ -38,7 +36,6 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onHide() as Void {
-        _isActive = false;
     }
 
     function loadPlaylists() as Void {
@@ -51,27 +48,24 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         _storage.saveSyncLoading(true);
         WatchUi.requestUpdate();
 
-        var apiKey = _storage.getApiKeyDirect();
-        if (apiKey == null) {
-            _client.authenticate(method(:onAuthForPlaylists));
-        } else {
-            fetchPlaylists();
+        var token = _storage.getAuthToken();
+        if (token == null || token.length() == 0) {
+            _client.authenticateFromSettings(method(:onReAuthForPlaylists));
+            return;
         }
+        fetchPlaylists();
     }
 
-    function onAuthForPlaylists(
+    function onReAuthForPlaylists(
         responseCode as Number,
         data as Dictionary?
     ) as Void {
-        if (!_isActive) {
-            _storage.saveSyncLoading(false);
-            return;
-        }
+        _storage.saveSyncLoading(false);
         if (responseCode == 200) {
             fetchPlaylists();
         } else {
             _storage.savePendingPlaylistResponseCode(401);
-            _storage.saveSyncLoading(false);
+            _storage.setSyncError("Re-auth failed - check GCM settings");
             WatchUi.requestUpdate();
         }
     }

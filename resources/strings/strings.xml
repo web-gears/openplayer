@@ -10,9 +10,6 @@
     <string id="serverTitle">Server URL</string>
     <string id="serverMessage">Enter your Jellyfin server address</string>
 
-    <string id="apiKeyTitle">API Key</string>
-    <string id="apiKeyMessage">Enter your Jellyfin API key</string>
-
     <string id="reviewTitle">Review</string>
     <string id="reviewMessage">Review your settings</string>
 

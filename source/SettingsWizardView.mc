@@ -14,8 +14,8 @@ class SettingsWizardView extends WatchUi.View {
     private var _remainingSeconds as Number = 300;
     private var _startTime as Number = 0;
     private var _serverUrlFilled as Boolean = false;
-    private var _apiKeyFilled as Boolean = false;
-    private var _apiKey as String = "";
+    private var _username as String = "";
+    private var _password as String = "";
     private var _serverUrl as String = "";
 
     private static var _qrCodeBitmap as Graphics.BitmapReference?;
@@ -115,14 +115,16 @@ class SettingsWizardView extends WatchUi.View {
             dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ESC: back", Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_REVIEW) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 100), Graphics.FONT_TINY, "Server:", Graphics.TEXT_JUSTIFY_RIGHT);
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 100), Graphics.FONT_TINY, _serverUrl, Graphics.TEXT_JUSTIFY_LEFT);
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 125), Graphics.FONT_TINY, "API:", Graphics.TEXT_JUSTIFY_RIGHT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 90), Graphics.FONT_TINY, "Server:", Graphics.TEXT_JUSTIFY_RIGHT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 90), Graphics.FONT_TINY, _serverUrl, Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 115), Graphics.FONT_TINY, "User:", Graphics.TEXT_JUSTIFY_RIGHT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 115), Graphics.FONT_TINY, _username, Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 140), Graphics.FONT_TINY, "Pass:", Graphics.TEXT_JUSTIFY_RIGHT);
             var masked = "---";
-            if (_apiKeyFilled && _apiKey != null && _apiKey.length() > 4) {
-                masked = "****" + _apiKey.substring(_apiKey.length() - 4, _apiKey.length());
+            if (_password.length() > 0) {
+                masked = "********";
             }
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 125), Graphics.FONT_TINY, masked, Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 140), Graphics.FONT_TINY, masked, Graphics.TEXT_JUSTIFY_LEFT);
             dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: save\nBACK: back", Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_DONE) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -200,20 +202,16 @@ class SettingsWizardView extends WatchUi.View {
         _serverUrl = url;
     }
 
-    function setApiKeyFilled(filled as Boolean) as Void {
-        _apiKeyFilled = filled;
+    function setUsername(username as String) as Void {
+        _username = username;
     }
 
-    function setApiKey(apiKey as String) as Void {
-        _apiKey = apiKey;
+    function setPassword(password as String) as Void {
+        _password = password;
     }
 
     function isServerUrlFilled() as Boolean {
         return _serverUrlFilled;
-    }
-
-    function isApiKeyFilled() as Boolean {
-        return _apiKeyFilled;
     }
 
     function tick() as Void {

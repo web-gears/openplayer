@@ -10,7 +10,8 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     private var _storage as StorageManager;
     private var _client as JellyfinClient;
     private var _serverUrl as String = "";
-    private var _apiKey as String = "";
+    private var _username as String = "";
+    private var _password as String = "";
     private var _isActive as Boolean = false;
 
     private var _sessionId as String = "";
@@ -32,7 +33,6 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
         _storage = new StorageManager();
         _client = new JellyfinClient(_storage);
         _serverUrl = _storage.getServer();
-        _apiKey = _storage.getApiKey();
         _isActive = true;
         _attemptCount = 0;
     }
@@ -197,9 +197,15 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
                     "required" => true,
                 },
                 {
-                    "id" => "apiKey",
-                    "name" => "Jellyfin API key",
+                    "id" => "username",
+                    "name" => "Jellyfin Username",
                     "type" => "text",
+                    "required" => true,
+                },
+                {
+                    "id" => "password",
+                    "name" => "Jellyfin Password",
+                    "type" => "password",
                     "required" => true,
                 },
             ],
@@ -291,16 +297,18 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             var values = data["values"] as Dictionary?;
             if (values != null) {
                 var serverUrlVal = values["serverUrl"] as String?;
-                var apiKeyVal = values["apiKey"] as String?;
+                var usernameVal = values["username"] as String?;
+                var passwordVal = values["password"] as String?;
 
-                if (serverUrlVal != null && apiKeyVal != null) {
+                if (serverUrlVal != null && usernameVal != null && passwordVal != null) {
                     _serverUrl = serverUrlVal;
-                    _apiKey = apiKeyVal;
+                    _username = usernameVal;
+                    _password = passwordVal;
                     _view.setStep(STEP_REVIEW);
                     _view.setServerUrl(_serverUrl);
                     _view.setServerUrlFilled(true);
-                    _view.setApiKey(_apiKey);
-                    _view.setApiKeyFilled(true);
+                    _view.setUsername(_username);
+                    _view.setPassword(_password);
                     return;
                 }
             }
@@ -334,9 +342,8 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     function saveSettings() as Void {
         _view.showLoading();
         _storage.setServer(_serverUrl);
-        _storage.setApiKey(_apiKey);
 
-        _client.authenticate(method(:onAuthResult));
+        _client.authenticate(_username, _password, method(:onAuthResult));
     }
 
     function onAuthResult(responseCode as Number, data as Dictionary?) as Void {
@@ -346,7 +353,7 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             _view.setStep(STEP_DONE);
             _client.getPlaylists(method(:onPlaylistsForWizard));
         } else if (responseCode == 401) {
-            _view.setError("Invalid API key");
+            _view.setError("Invalid username or password");
         } else if (responseCode == -200) {
             _view.setError("No internet connection");
         } else if (responseCode == -201) {

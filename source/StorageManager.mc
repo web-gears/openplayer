@@ -47,8 +47,12 @@ class StorageManager {
 
     function isConfigured() as Boolean {
         var server = getServer();
-        var apiKey = getApiKey();
-        return server.length() > 0 && apiKey.length() > 0;
+        if (server.length() == 0) { return false; }
+        var token = getAuthToken();
+        if (token != null && token.length() > 0) { return true; }
+        var username = getUsername();
+        var password = getPassword();
+        return username.length() > 0 && password.length() > 0;
     }
 
     function getDefaultPlaylistId() as String? {
@@ -111,39 +115,32 @@ class StorageManager {
         return -1;
     }
 
-    function setApiKey(key as String?) as Void {
-        if (key == null) {
-            return;
-        }
-        Storage.setValue("jellyfin_apikey", obfuscate(key));
-        Storage.setValue("jellyfin_apikey_direct", key);
+    function setUsername(user as String?) as Void {
+        if (user == null) { return; }
+        Storage.setValue("jellyfin_username", user);
     }
 
-    function getApiKey() as String {
-        var propsKey = Application.Properties.getValue("jellyfin_apikey") as String?;
-        if (propsKey != null && propsKey.length() > 0) {
-            return propsKey;
+    function getUsername() as String {
+        var props = Application.Properties.getValue("jellyfin_username") as String?;
+        if (props != null && props.length() > 0) {
+            return props;
         }
-        var obfuscated = Storage.getValue("jellyfin_apikey") as String?;
-        if (obfuscated == null) {
-            return "";
-        }
-        return deobfuscate(obfuscated);
+        var stored = Storage.getValue("jellyfin_username") as String?;
+        return stored != null ? stored : "";
     }
 
-    function setApiKeyDirect(key as String?) as Void {
-        if (key == null) {
-            return;
-        }
-        Storage.setValue("jellyfin_apikey_direct", key);
+    function setPassword(pass as String?) as Void {
+        if (pass == null) { return; }
+        Storage.setValue("jellyfin_password", obfuscate(pass));
     }
 
-    function getApiKeyDirect() as String? {
-        var propsKey = Application.Properties.getValue("jellyfin_apikey") as String?;
-        if (propsKey != null && propsKey.length() > 0) {
-            return propsKey;
+    function getPassword() as String {
+        var props = Application.Properties.getValue("jellyfin_password") as String?;
+        if (props != null && props.length() > 0) {
+            return props;
         }
-        return Storage.getValue("jellyfin_apikey_direct") as String?;
+        var stored = Storage.getValue("jellyfin_password") as String?;
+        return stored != null ? deobfuscate(stored) : "";
     }
 
     function setAuthToken(token as String?) as Void {
@@ -356,7 +353,6 @@ class StorageManager {
 
     function clearAll() as Void {
         Storage.deleteValue("jellyfin_server");
-        Storage.deleteValue("jellyfin_apikey");
         Storage.deleteValue("jellyfin_token");
         Storage.deleteValue("jellyfin_userId");
         Storage.deleteValue("sync_state");
@@ -685,12 +681,17 @@ class StorageManager {
     }
 
     private function obfuscate(str as String) as String {
-        return str;
+        var result = "";
+        for (var i = 0; i < str.length(); i++) {
+            result = result + str.substring(str.length() - 1 - i, str.length() - i);
+        }
+        return result;
     }
 
     private function deobfuscate(str as String) as String {
-        return str;
+        return obfuscate(str);
     }
+
     function savePendingPlaylistIds(ids as String) as Void {
         Storage.setValue("pending_playlist_ids", ids);
     }

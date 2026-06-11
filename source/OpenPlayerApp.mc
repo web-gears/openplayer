@@ -66,11 +66,6 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
         app.storage().setServer(url);
     }
 
-    static function setApiKey(key as String) as Void {
-        var app = Application.getApp() as OpenPlayerApp;
-        app.storage().setApiKey(key);
-    }
-
     function storage() as StorageManager {
         return _storage;
     }

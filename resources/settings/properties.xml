@@ -1,4 +1,5 @@
 <properties>
     <property id="jellyfin_server" type="string" />
-    <property id="jellyfin_apikey" type="string" />
+    <property id="jellyfin_username" type="string" />
+    <property id="jellyfin_password" type="string" />
 </properties>

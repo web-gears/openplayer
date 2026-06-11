@@ -31,6 +31,8 @@ class JellyfinClient {
     }
 
     function authenticate(
+        username as String,
+        password as String,
         callback as
             (Method(responseCode as Number, data as Dictionary?) as Void)
     ) as Void {
@@ -38,23 +40,25 @@ class JellyfinClient {
         _pendingMethod = AUTH_METHOD_ONRESPONSE;
 
         var server = _storage.getServer();
-        var apiKey = _storage.getApiKey();
-
-        if (server == null || apiKey == null) {
-            _callback.invoke(401, null);
+        if (server == null || server.length() == 0) {
+            _callback.invoke(400, null);
             return;
         }
 
-        _storage.setApiKeyDirect(apiKey);
+        var url = buildUrl(server, "/Users/AuthenticateByName");
+        var body = {
+            "Username" => username,
+            "Pw" => password,
+        };
 
-        var url = buildUrl(server as String, "/System/Info");
         Communications.makeWebRequest(
             url,
-            {},
+            body,
             {
-                :method => Communications.HTTP_REQUEST_METHOD_GET,
+                :method => Communications.HTTP_REQUEST_METHOD_POST,
                 :headers => {
-                    "X-Emby-Token" => apiKey,
+                    "X-Emby-Authorization" => "MediaBrowser Client=\"OpenPlayer\", Device=\"Fenix 6S Pro\", DeviceId=\"openplayer-001\", Version=\"1.0.0\"",
+                    "Content-Type" => Communications.REQUEST_CONTENT_TYPE_JSON,
                 },
                 :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON,
             },
@@ -62,60 +66,32 @@ class JellyfinClient {
         );
     }
 
-    function authenticateWithPlaylist(
-        playlistId as String,
+    function authenticateFromSettings(
         callback as
             (Method(responseCode as Number, data as Dictionary?) as Void)
     ) as Void {
-        _callback = callback;
-        _pendingMethod = AUTH_METHOD_ONRESPONSE;
-        _pendingPlaylistId = playlistId;
-
-        var server = _storage.getServer();
-        var apiKey = _storage.getApiKey();
-
-        if (server == null || apiKey == null) {
-            _callback.invoke(401, null);
+        var username = _storage.getUsername();
+        var password = _storage.getPassword();
+        if (username.length() == 0 || password.length() == 0) {
+            callback.invoke(401, null);
             return;
         }
-
-        _storage.setApiKeyDirect(apiKey);
-        _callback.invoke(200, null);
+        authenticate(username, password, callback);
     }
 
-    function authenticateWithPlaylistList(
-        playlistIds as Array,
-        callback as
-            (Method(responseCode as Number, data as Dictionary?) as Void)
-    ) as Void {
-        _callback = callback;
-        _pendingMethod = AUTH_METHOD_ONRESPONSE;
-
-        var server = _storage.getServer();
-        var apiKey = _storage.getApiKey();
-
-        if (server == null || apiKey == null) {
-            _callback.invoke(401, null);
-            return;
-        }
-
-        _storage.setApiKeyDirect(apiKey);
-        _callback.invoke(200, null);
-    }
-
-    function onAuthResponseWithPlaylist(
+    function onAuthResponse(
         responseCode as Number,
         data as Dictionary?
     ) as Void {
+        if (_pendingMethod != AUTH_METHOD_ONRESPONSE) {
+            return;
+        }
         if (responseCode == 200 && data != null) {
-            var sessionInfo = data["SessionInfo"] as Dictionary?;
+            var token = data["AccessToken"] as String?;
             var userInfo = data["User"] as Dictionary?;
-
-            if (sessionInfo != null && userInfo != null) {
-                var token = sessionInfo["AccessToken"] as String?;
+            if (token != null && userInfo != null) {
                 var userId = userInfo["Id"] as String?;
-
-                if (token != null && userId != null) {
+                if (userId != null) {
                     _storage.setAuthToken(token);
                     _storage.setUserId(userId);
                     _callback.invoke(200, data);
@@ -128,21 +104,6 @@ class JellyfinClient {
         }
     }
 
-    function onAuthResponse(
-        responseCode as Number,
-        data as Dictionary?
-    ) as Void {
-        if (responseCode == 200 && data != null) {
-            var userId = data["Id"] as String?;
-            if (userId != null) {
-                _storage.setUserId(userId);
-                _callback.invoke(200, data);
-                return;
-            }
-        }
-        _callback.invoke(responseCode, null);
-    }
-
     function getPlaylists(
         callback as
             (Method(responseCode as Number, data as Dictionary?) as Void)
@@ -151,9 +112,9 @@ class JellyfinClient {
         _pendingMethod = PLAYLISTS_METHOD_ONRESPONSE;
 
         var server = _storage.getServer();
-        var apiKey = _storage.getApiKeyDirect();
+        var token = _storage.getAuthToken();
 
-        if (server == null || apiKey == null) {
+        if (server == null || token == null) {
             _callback.invoke(401, null);
             return;
         }
@@ -171,7 +132,7 @@ class JellyfinClient {
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
                 :headers => {
-                    "X-Emby-Token" => apiKey,
+                    "X-Emby-Token" => token,
                 },
                 :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON,
             },
@@ -213,9 +174,9 @@ class JellyfinClient {
         _pendingPlaylistIndex = startIndex;
 
         var server = _storage.getServer();
-        var apiKey = _storage.getApiKeyDirect();
+        var token = _storage.getAuthToken();
 
-        if (server == null || apiKey == null) {
+        if (server == null || token == null) {
             _tracksCallback.invoke(401, [], _pendingPlaylistIndex);
             return;
         }
@@ -236,7 +197,7 @@ class JellyfinClient {
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
                 :headers => {
-                    "X-Emby-Token" => apiKey,
+                    "X-Emby-Token" => token,
                 },
                 :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON,
             },
@@ -324,9 +285,9 @@ class JellyfinClient {
         bitrate as Number or Null
     ) as Void {
         var server = _storage.getServer();
-        var apiKey = _storage.getApiKeyDirect();
+        var token = _storage.getAuthToken();
 
-        if (server == null || apiKey == null) {
+        if (server == null || token == null) {
             callback.invoke(401, null);
             return;
         }
@@ -338,7 +299,7 @@ class JellyfinClient {
         var options = {
             :method => Communications.HTTP_REQUEST_METHOD_GET,
             :headers => {
-                "X-Emby-Token" => apiKey,
+                "X-Emby-Token" => token,
             },
             :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_AUDIO,
             :mediaEncoding => Media.ENCODING_MP3,
