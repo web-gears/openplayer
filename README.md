@@ -1,6 +1,6 @@
 # OpenPlayer
 
-A music and podcast player for Garmin smartwatch, syncing with Jellyfin media servers via API key authentication.
+A music and podcast player for Garmin smartwatch, syncing with Jellyfin media servers via username/password authentication.
 
 [Garmin Connect IQ Store link](https://apps.garmin.com/apps/261eb561-66a9-448f-8ef0-9d3a5b22652a)
 
@@ -10,12 +10,12 @@ A music and podcast player for Garmin smartwatch, syncing with Jellyfin media se
 
 
 ## Features
-- Secure API key authentication (no username/password)
+- Username/password authentication via Jellyfin's `/Users/AuthenticateByName`
+- Credentials used once — only the access token is stored on device
 - Select specific Jellyfin playlists to sync
 - Local storage management with size warnings
-- Encrypted API key storage (XOR obfuscation)
-- First-run setup wizard
-- In-app configuration screen
+- First-run setup wizard with QR code flow
+- Garmin Connect Mobile settings for server URL, username, and password
 - Audio content provider app for Garmin wearable integration
 
 <img width="240" height="240" alt="ezgif-20d663f3e9bcf921" src="https://github.com/user-attachments/assets/f785cd54-17a9-432e-bed0-24223d7d60ae" />
@@ -23,7 +23,7 @@ A music and podcast player for Garmin smartwatch, syncing with Jellyfin media se
 ## Requirements
 - Garmin Fenix 5+ (or compatible Connect IQ device starting API level 3.1 with music and WiFi support)
 - Jellyfin server with public access
-- API key generated from Jellyfin
+- Jellyfin user account credentials
 
 ## Privacy
 
