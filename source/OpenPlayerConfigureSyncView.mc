@@ -27,6 +27,9 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
         if (storage.getPendingPlaylistResponseCode() != 200) {
             _isLoading = true;
         }
+        if (WatchUi.View has :setActionMenuIndicator) {
+            setActionMenuIndicator({:enabled => true});
+        }
         _loadPlaylists();
     }
 
@@ -131,7 +134,7 @@ if (rc == 200) {
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            var hint = _errorMessage.length() > 0 ? "LAP: Retry | ESC: Back" : "LAP: Retry";
+            var hint = _errorMessage.length() > 0 ? "Retry | ESC: Back" : "Retry";
             dc.drawText(
                 dc.getWidth() / 2,
                 dc.getHeight() / 2 + ScaleHelper.scale(dc, 10),
@@ -211,7 +214,7 @@ if (rc == 200) {
             dc.getWidth() / 2,
             dc.getHeight() - ScaleHelper.scale(dc, 65),
             Graphics.FONT_XTINY,
-            "MENU: select | ENTER: sync",
+            "Select | ENTER: sync",
             Graphics.TEXT_JUSTIFY_CENTER
         );
         
@@ -220,7 +223,7 @@ if (rc == 200) {
             dc.getWidth() / 2,
             dc.getHeight() - ScaleHelper.scale(dc, 45),
             Graphics.FONT_XTINY,
-            "LAP: play",
+            "Play",
             Graphics.TEXT_JUSTIFY_CENTER
         );
     }

@@ -117,7 +117,7 @@ class AboutView extends WatchUi.View {
             dc.getWidth() / 2,
             dc.getHeight() - ScaleHelper.scale(dc, 20),
             Graphics.FONT_XTINY,
-            "LAP: back",
+            "Back",
             Graphics.TEXT_JUSTIFY_CENTER
         );
     }

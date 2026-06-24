@@ -28,6 +28,9 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             _selectedIndex = storage.getPlaybackPlaylistSelection();
             _scrollOffset = storage.getPlaybackPlaylistSelection();
         }
+        if (WatchUi.View has :setActionMenuIndicator) {
+            setActionMenuIndicator({:enabled => true});
+        }
     }
 
     function loadData() as Void {
@@ -106,9 +109,9 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
                 dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
                 dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 30), Graphics.FONT_XTINY, server, Graphics.TEXT_JUSTIFY_CENTER);
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "MENU: settings", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "Menu: settings", Graphics.TEXT_JUSTIFY_CENTER);
             } else {
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, "No synced tracks\nMENU: Setup", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, "No synced tracks\nMenu: Setup", Graphics.TEXT_JUSTIFY_CENTER);
             }
             return;
         }
@@ -151,7 +154,7 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         }
         
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: select\nMENU: options", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: select\nMenu: options", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     private function renderTrackList(dc as Dc) as Void {
@@ -221,7 +224,7 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         }
         
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "LAP: playlists\nENTER: play", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "Back: playlists\nENTER: play", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     function setMode(mode as String) as Void {

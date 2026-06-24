@@ -36,19 +36,24 @@ class OpenPlayerPlaylistMenuDelegate extends WatchUi.Menu2InputDelegate {
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
         var key = evt.getKey();
-
-        if (key == WatchUi.KEY_MENU || key == WatchUi.KEY_ENTER) {
-            startSyncIfQueued();
-            return true;
-        } else if (key == WatchUi.KEY_LAP) {
-            WatchUi.popView(WatchUi.SLIDE_DOWN);
-            return true;
-        }
+        if (key == WatchUi.KEY_MENU) { return onMenu(); }
+        if (key == WatchUi.KEY_ENTER) { return onMenu(); }
+        if (key == WatchUi.KEY_LAP) { onBack(); return true; }
         return false;
+    }
+
+    function onMenu() as Boolean {
+        startSyncIfQueued();
+        return true;
     }
 
     function onBack() as Void {
         WatchUi.popView(WatchUi.SLIDE_DOWN);
+    }
+
+    function onActionMenu() as Boolean {
+        startSyncIfQueued();
+        return true;
     }
 
     function startSyncIfQueued() as Void {

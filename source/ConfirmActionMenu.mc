@@ -57,36 +57,39 @@ class ConfirmActionDelegate extends WatchUi.BehaviorDelegate {
 
     function onKey(evt) {
         var key = evt.getKey();
-
-        if (key == WatchUi.KEY_ESC) {
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            return true;
-        }
-
-        if (key == WatchUi.KEY_ENTER) {
-            if (_view.getSelected() == 0 && _onConfirm != null) {
-                _onConfirm.invoke();
-            }
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            return true;
-        }
-
-        if (key == WatchUi.KEY_UP) {
-            if (_view.getSelected() > 0) {
-                _view.setSelected(_view.getSelected() - 1);
-                WatchUi.requestUpdate();
-            }
-            return true;
-        }
-
-        if (key == WatchUi.KEY_DOWN) {
-            if (_view.getSelected() < 1) {
-                _view.setSelected(_view.getSelected() + 1);
-                WatchUi.requestUpdate();
-            }
-            return true;
-        }
-
+        if (key == WatchUi.KEY_ESC) { return onBack(); }
+        if (key == WatchUi.KEY_ENTER) { return onSelect(); }
+        if (key == WatchUi.KEY_UP) { return onPreviousPage(); }
+        if (key == WatchUi.KEY_DOWN) { return onNextPage(); }
         return false;
+    }
+
+    function onSelect() {
+        if (_view.getSelected() == 0 && _onConfirm != null) {
+            _onConfirm.invoke();
+        }
+        WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+        return true;
+    }
+
+    function onBack() {
+        WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+        return true;
+    }
+
+    function onPreviousPage() {
+        if (_view.getSelected() > 0) {
+            _view.setSelected(_view.getSelected() - 1);
+            WatchUi.requestUpdate();
+        }
+        return true;
+    }
+
+    function onNextPage() {
+        if (_view.getSelected() < 1) {
+            _view.setSelected(_view.getSelected() + 1);
+            WatchUi.requestUpdate();
+        }
+        return true;
     }
 }

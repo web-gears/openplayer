@@ -104,37 +104,11 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
 
     function onKey(evt) as Boolean {
         var key = evt.getKey();
-
-        if (key == 8) {
-            var playlists = _loadPlaylistsFallback();
-            if (playlists.size() > 0) {
-                var newIdx = _currentPlaylistIndex + 1;
-                if (newIdx < playlists.size()) {
-                    _currentPlaylistIndex = newIdx;
-                    _storage.saveCurrentPlaylistIndex(newIdx);
-                    _storage.saveSyncState(_syncState);
-                    WatchUi.requestUpdate();
-                }
-            }
-            return true;
-        } else if (key == 13) {
-            var playlists = _loadPlaylistsFallback();
-            if (playlists.size() > 0) {
-                var newIdx = _currentPlaylistIndex - 1;
-                if (newIdx >= 0) {
-                    _currentPlaylistIndex = newIdx;
-                    _storage.saveCurrentPlaylistIndex(newIdx);
-                    WatchUi.requestUpdate();
-                }
-            }
-            return true;
-        } else if (key == 4) {
-            startSync();
-            return true;
-        } else if (key == 7) {
-            toggleCurrentSelection();
-            return true;
-        } else if (key == 5) {
+        if (key == 4) { return onSelect(); }
+        if (key == 7) { return onMenu(); }
+        if (key == 13) { return onPreviousPage(); }
+        if (key == 8) { return onNextPage(); }
+        if (key == 5) {
             var playlists = _loadPlaylistsFallback();
             if (playlists.size() == 0) {
                 _storage.clearPendingPlaylistResponse();
@@ -150,6 +124,62 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         return false;
+    }
+
+    function onSelect() as Boolean {
+        startSync();
+        return true;
+    }
+
+    function onBack() as Boolean {
+        var playlists = _loadPlaylistsFallback();
+        if (playlists.size() == 0) {
+            _storage.clearPendingPlaylistResponse();
+        }
+        _storage.clearSyncProgress();
+        return false;
+    }
+
+    function onNextPage() as Boolean {
+        var playlists = _loadPlaylistsFallback();
+        if (playlists.size() > 0) {
+            var newIdx = _currentPlaylistIndex + 1;
+            if (newIdx < playlists.size()) {
+                _currentPlaylistIndex = newIdx;
+                _storage.saveCurrentPlaylistIndex(newIdx);
+                _storage.saveSyncState(_syncState);
+                WatchUi.requestUpdate();
+            }
+        }
+        return true;
+    }
+
+    function onPreviousPage() as Boolean {
+        var playlists = _loadPlaylistsFallback();
+        if (playlists.size() > 0) {
+            var newIdx = _currentPlaylistIndex - 1;
+            if (newIdx >= 0) {
+                _currentPlaylistIndex = newIdx;
+                _storage.saveCurrentPlaylistIndex(newIdx);
+                WatchUi.requestUpdate();
+            }
+        }
+        return true;
+    }
+
+    function onMenu() as Boolean {
+        toggleCurrentSelection();
+        return true;
+    }
+
+    function onActionMenu() as Boolean {
+        var menu = new WatchUi.ActionMenu(null);
+        menu.addItem(new WatchUi.ActionMenuItem({:label => "Toggle Select"}, "toggle"));
+        menu.addItem(new WatchUi.ActionMenuItem({:label => "Sync"}, "sync"));
+        menu.addItem(new WatchUi.ActionMenuItem({:label => "Play"}, "play"));
+        menu.addItem(new WatchUi.ActionMenuItem({:label => "Settings"}, "settings"));
+        WatchUi.showActionMenu(menu, new SyncActionMenuDelegate(self));
+        return true;
     }
 
     function toggleCurrentSelection() as Void {
@@ -357,6 +387,15 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         WatchUi.requestUpdate();
     }
 
+    function openPlaybackView() as Void {
+        var playbackView = new OpenPlayerConfigurePlaybackView();
+        WatchUi.switchToView(
+            playbackView,
+            new OpenPlayerConfigurePlaybackDelegate(playbackView),
+            WatchUi.SLIDE_UP
+        );
+    }
+
     function openSettings() as Void {
         var wizardView = new SettingsWizardView();
         WatchUi.pushView(
@@ -364,6 +403,31 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             new SettingsWizardDelegate(wizardView),
             WatchUi.SLIDE_IMMEDIATE
         );
+    }
+}
+
+class SyncActionMenuDelegate extends WatchUi.ActionMenuDelegate {
+    private var _delegate as OpenPlayerConfigureSyncDelegate;
+
+    function initialize(delegate as OpenPlayerConfigureSyncDelegate) {
+        ActionMenuDelegate.initialize();
+        _delegate = delegate;
+    }
+
+    function onSelect(item as WatchUi.ActionMenuItem) as Void {
+        var id = item.getId() as String;
+        if (id.equals("toggle")) {
+            _delegate.toggleCurrentSelection();
+        } else if (id.equals("sync")) {
+            _delegate.startSync();
+        } else if (id.equals("play")) {
+            _delegate.openPlaybackView();
+        } else if (id.equals("settings")) {
+            _delegate.openSettings();
+        }
+    }
+
+    function onBack() as Void {
     }
 }
 
@@ -375,6 +439,9 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
     function onLayout(dc as Dc) as Void {}
 
     function onShow() as Void {
+        if (WatchUi.View has :setActionMenuIndicator) {
+            setActionMenuIndicator({:enabled => true});
+        }
         WatchUi.requestUpdate();
     }
 
@@ -609,45 +676,85 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
         var key = evt.getKey();
-
-        if (key == WatchUi.KEY_ENTER) {
-            var progress = _storage.loadSyncProgressDict();
-            if (progress != null) {
-                var phase = progress["phase"] as String?;
-                if (phase != null && phase.equals("confirm")) {
-                    _storage.saveSyncProgressDict({
-                        "phase" => "starting"
-                    });
-                    Communications.startSync();
-                    return true;
-                }
-                if (phase != null && (phase.equals("complete") || phase.equals("cancelled"))) {
-                    _storage.clearSyncProgress();
-                    WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-                    return true;
-                }
-            }
-            return true;
-        }
-
-        if (key == WatchUi.KEY_ESC) {
-            var progress = _storage.loadSyncProgressDict();
-            if (progress != null) {
-                var phase = progress["phase"] as String?;
-                if (phase == null || phase.equals("confirm")) {
-                    _storage.clearSyncProgress();
-                    WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-                    return true;
-                }
-                if (!phase.equals("complete") && !phase.equals("cancelled")) {
-                    _storage.saveCancelRequested(true);
-                }
-            }
-            _storage.clearSyncProgress();
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            return true;
-        }
-
+        if (key == WatchUi.KEY_ENTER) { return onSelect(); }
+        if (key == WatchUi.KEY_ESC) { return onBack(); }
         return false;
+    }
+
+    function onSelect() as Boolean {
+        var progress = _storage.loadSyncProgressDict();
+        if (progress != null) {
+            var phase = progress["phase"] as String?;
+            if (phase != null && phase.equals("confirm")) {
+                _storage.saveSyncProgressDict({
+                    "phase" => "starting"
+                });
+                Communications.startSync();
+                return true;
+            }
+            if (phase != null && (phase.equals("complete") || phase.equals("cancelled"))) {
+                _storage.clearSyncProgress();
+                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+                return true;
+            }
+        }
+        return true;
+    }
+
+    function onBack() as Boolean {
+        var progress = _storage.loadSyncProgressDict();
+        if (progress != null) {
+            var phase = progress["phase"] as String?;
+            if (phase == null || phase.equals("confirm")) {
+                _storage.clearSyncProgress();
+                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+                return true;
+            }
+            if (!phase.equals("complete") && !phase.equals("cancelled")) {
+                _storage.saveCancelRequested(true);
+            }
+        }
+        _storage.clearSyncProgress();
+        WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+        return true;
+    }
+
+    function onActionMenu() as Boolean {
+        var menu = new WatchUi.ActionMenu(null);
+        var progress = _storage.loadSyncProgressDict();
+        var phase = progress != null ? progress["phase"] as String? : null;
+        if (phase != null && phase.equals("confirm")) {
+            menu.addItem(new WatchUi.ActionMenuItem({:label => "Start Sync"}, "start"));
+            menu.addItem(new WatchUi.ActionMenuItem({:label => "Cancel"}, "cancel"));
+        } else if (phase != null && (phase.equals("complete") || phase.equals("cancelled"))) {
+            menu.addItem(new WatchUi.ActionMenuItem({:label => "Done"}, "done"));
+        } else if (phase != null) {
+            menu.addItem(new WatchUi.ActionMenuItem({:label => "Cancel Sync"}, "cancel"));
+        }
+        WatchUi.showActionMenu(menu, new SyncStatusActionMenuDelegate(self));
+        return true;
+    }
+}
+
+class SyncStatusActionMenuDelegate extends WatchUi.ActionMenuDelegate {
+    private var _delegate as OpenPlayerSyncStatusDelegate;
+
+    function initialize(delegate as OpenPlayerSyncStatusDelegate) {
+        ActionMenuDelegate.initialize();
+        _delegate = delegate;
+    }
+
+    function onSelect(item as WatchUi.ActionMenuItem) as Void {
+        var id = item.getId() as String;
+        if (id.equals("start")) {
+            _delegate.onSelect();
+        } else if (id.equals("cancel")) {
+            _delegate.onBack();
+        } else if (id.equals("done")) {
+            _delegate.onSelect();
+        }
+    }
+
+    function onBack() as Void {
     }
 }

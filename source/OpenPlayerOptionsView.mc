@@ -233,45 +233,55 @@ class OpenPlayerOptionsDelegate extends WatchUi.BehaviorDelegate {
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
         var key = evt.getKey();
-
-        if (key == WatchUi.KEY_ESC) {
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            return true;
-        }
-
-        if (key == WatchUi.KEY_ENTER) {
-            if (_view != null) {
-                _view.onSelect_withIndex(_selectedIndex);
-            }
-            return true;
-        }
-
-        if (key == WatchUi.KEY_UP) {
-            if (_selectedIndex > 0) {
-                _selectedIndex = _selectedIndex - 1;
-                var storage = new StorageManager();
-                storage.saveOptionsSelection(_selectedIndex);
-                if (_view != null) {
-                    _view.setSelectedIndex(_selectedIndex);
-                }
-                WatchUi.requestUpdate();
-            }
-            return true;
-        }
-
-        if (key == WatchUi.KEY_DOWN) {
-            if (_selectedIndex < _options.size() - 1) {
-                _selectedIndex = _selectedIndex + 1;
-                var storage = new StorageManager();
-                storage.saveOptionsSelection(_selectedIndex);
-                if (_view != null) {
-                    _view.setSelectedIndex(_selectedIndex);
-                }
-                WatchUi.requestUpdate();
-            }
-            return true;
-        }
-
+        if (key == WatchUi.KEY_ESC) { return onBack(); }
+        if (key == WatchUi.KEY_ENTER) { return onSelect(); }
+        if (key == WatchUi.KEY_UP) { return onPreviousPage(); }
+        if (key == WatchUi.KEY_DOWN) { return onNextPage(); }
         return false;
+    }
+
+    function onSelect() as Boolean {
+        if (_view != null) {
+            _view.onSelect_withIndex(_selectedIndex);
+        }
+        return true;
+    }
+
+    function onBack() as Boolean {
+        WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+        return true;
+    }
+
+    function onPreviousPage() as Boolean {
+        if (_selectedIndex > 0) {
+            _selectedIndex = _selectedIndex - 1;
+            var storage = new StorageManager();
+            storage.saveOptionsSelection(_selectedIndex);
+            if (_view != null) {
+                _view.setSelectedIndex(_selectedIndex);
+            }
+            WatchUi.requestUpdate();
+        }
+        return true;
+    }
+
+    function onNextPage() as Boolean {
+        if (_selectedIndex < _options.size() - 1) {
+            _selectedIndex = _selectedIndex + 1;
+            var storage = new StorageManager();
+            storage.saveOptionsSelection(_selectedIndex);
+            if (_view != null) {
+                _view.setSelectedIndex(_selectedIndex);
+            }
+            WatchUi.requestUpdate();
+        }
+        return true;
+    }
+
+    function onActionMenu() as Boolean {
+        if (_view != null) {
+            _view.onSelect_withIndex(_selectedIndex);
+        }
+        return true;
     }
 }

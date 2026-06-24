@@ -48,109 +48,142 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     function onShow() as Void {}
 
     function onKey(evt) as Lang.Boolean {
-        var step = _view.getStep();
         var key = evt.getKey();
-
-        if (step == STEP_CHOICE) {
-            if (key == WatchUi.KEY_UP) {
-                startQrFlow();
-                return true;
-            } else if (key == WatchUi.KEY_DOWN) {
-                _view.setStep(STEP_GCM_INFO);
-                return true;
-            }
-            return false;
-        }
-
-        if (step == STEP_QR_LOADING) {
-            if (key == WatchUi.KEY_ESC) {
-                if (_tickTimer != null) {
-                    _tickTimer.stop();
-                    _tickTimer = null;
-                }
-                _view.setStep(STEP_CHOICE);
-                return true;
-            } else if (key == WatchUi.KEY_ENTER) {
-                _view.setStep(STEP_GCM_INFO);
-                return true;
-            }
-            return false;
-        }
-
-        if (step == STEP_QR_DISPLAY) {
-            if (key == WatchUi.KEY_ENTER) {
-                fetchResult();
-                return true;
-            } else if (key == WatchUi.KEY_ESC) {
-                _view.setStep(STEP_CHOICE);
-                return true;
-            }
-            return false;
-        }
-
-        if (step == STEP_GCM_INFO) {
-            if (key == WatchUi.KEY_ESC) {
-                _view.setStep(STEP_CHOICE);
-                return true;
-            } else if (key == WatchUi.KEY_ENTER) {
-                var username = _storage.getUsername();
-                var password = _storage.getPassword();
-                if (username.length() > 0 && password.length() > 0) {
-                    _username = username;
-                    _password = password;
-                    _serverUrl = _storage.getServer();
-                    _view.setServerUrl(_serverUrl);
-                    _view.setUsername(_username);
-                    _view.setPassword(_password);
-                    _view.clearError();
-                    saveSettings();
-                } else {
-                    _view.setError("Set GCM settings first");
-                }
-                return true;
-            }
-            return false;
-        }
-
-        if (key == WatchUi.KEY_LAP) {
-            if (step == STEP_DONE) {
-                _isActive = false;
-                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-                return true;
-            }
-        }
-
-        if (key == WatchUi.KEY_ESC) {
-            if (step == STEP_REVIEW) {
-                _view.setStep(STEP_CHOICE);
-                _view.clearError();
-                return true;
-            } else if (step == STEP_CHOICE) {
-                _isActive = false;
-                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-                return true;
-            }
-        }
-
-        if (key == WatchUi.KEY_ENTER) {
-            if (step == STEP_REVIEW) {
-                saveSettings();
-                return true;
-            } else if (step == STEP_DONE) {
-                _isActive = false;
-                var syncView = new OpenPlayerConfigureSyncView();
-                var syncDelegate = new OpenPlayerConfigureSyncDelegate(syncView);
-                WatchUi.switchToView(
-                    syncView,
-                    syncDelegate,
-                    WatchUi.SLIDE_IMMEDIATE
-                );
-                syncDelegate.onShow();
-                return true;
-            }
-        }
-
+        if (key == WatchUi.KEY_UP) { return onPreviousPage(); }
+        if (key == WatchUi.KEY_DOWN) { return onNextPage(); }
+        if (key == WatchUi.KEY_ENTER) { return onSelect(); }
+        if (key == WatchUi.KEY_ESC) { return onBack(); }
+        if (key == WatchUi.KEY_LAP) { return onMenu(); }
         return false;
+    }
+
+    function onSelect() as Lang.Boolean {
+        var step = _view.getStep();
+        if (step == STEP_CHOICE) {
+            startQrFlow();
+            return true;
+        }
+        if (step == STEP_QR_LOADING) {
+            _view.setStep(STEP_GCM_INFO);
+            return true;
+        }
+        if (step == STEP_QR_DISPLAY) {
+            fetchResult();
+            return true;
+        }
+        if (step == STEP_GCM_INFO) {
+            var username = _storage.getUsername();
+            var password = _storage.getPassword();
+            if (username.length() > 0 && password.length() > 0) {
+                _username = username;
+                _password = password;
+                _serverUrl = _storage.getServer();
+                _view.setServerUrl(_serverUrl);
+                _view.setUsername(_username);
+                _view.setPassword(_password);
+                _view.clearError();
+                saveSettings();
+            } else {
+                _view.setError("Set GCM settings first");
+            }
+            return true;
+        }
+        if (step == STEP_REVIEW) {
+            saveSettings();
+            return true;
+        }
+        if (step == STEP_DONE) {
+            _isActive = false;
+            var syncView = new OpenPlayerConfigureSyncView();
+            var syncDelegate = new OpenPlayerConfigureSyncDelegate(syncView);
+            WatchUi.switchToView(
+                syncView,
+                syncDelegate,
+                WatchUi.SLIDE_IMMEDIATE
+            );
+            syncDelegate.onShow();
+            return true;
+        }
+        return false;
+    }
+
+    function onBack() as Lang.Boolean {
+        var step = _view.getStep();
+        if (step == STEP_QR_LOADING) {
+            if (_tickTimer != null) {
+                _tickTimer.stop();
+                _tickTimer = null;
+            }
+            _view.setStep(STEP_CHOICE);
+            return true;
+        }
+        if (step == STEP_QR_DISPLAY) {
+            _view.setStep(STEP_CHOICE);
+            return true;
+        }
+        if (step == STEP_GCM_INFO) {
+            _view.setStep(STEP_CHOICE);
+            return true;
+        }
+        if (step == STEP_REVIEW) {
+            _view.setStep(STEP_CHOICE);
+            _view.clearError();
+            return true;
+        }
+        if (step == STEP_CHOICE) {
+            _isActive = false;
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            return true;
+        }
+        if (step == STEP_DONE) {
+            _isActive = false;
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            return true;
+        }
+        return false;
+    }
+
+    function onNextPage() as Lang.Boolean {
+        var step = _view.getStep();
+        if (step == STEP_CHOICE) {
+            _view.setStep(STEP_GCM_INFO);
+            return true;
+        }
+        return false;
+    }
+
+    function onPreviousPage() as Lang.Boolean {
+        var step = _view.getStep();
+        if (step == STEP_CHOICE) {
+            startQrFlow();
+            return true;
+        }
+        return false;
+    }
+
+    function onMenu() as Lang.Boolean {
+        var step = _view.getStep();
+        if (step == STEP_DONE) {
+            _isActive = false;
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            return true;
+        }
+        return false;
+    }
+
+    function onActionMenu() as Lang.Boolean {
+        var step = _view.getStep();
+        var menu = new WatchUi.ActionMenu(null);
+        if (step == STEP_CHOICE) {
+            menu.addItem(new WatchUi.ActionMenuItem({:label => "QR Code"}, "qr"));
+            menu.addItem(new WatchUi.ActionMenuItem({:label => "GCM Settings"}, "gcm"));
+        } else if (step == STEP_DONE) {
+            menu.addItem(new WatchUi.ActionMenuItem({:label => "Done"}, "done"));
+        } else {
+            menu.addItem(new WatchUi.ActionMenuItem({:label => "Back"}, "back"));
+        }
+        WatchUi.showActionMenu(menu, new WizardActionMenuDelegate(self));
+        return true;
     }
 
     function startTickTimer() as Void {
@@ -409,5 +442,30 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             _storage.savePendingPlaylistResponseCode(responseCode);
         }
         WatchUi.requestUpdate();
+    }
+}
+
+class WizardActionMenuDelegate extends WatchUi.ActionMenuDelegate {
+    private var _delegate as SettingsWizardDelegate;
+
+    function initialize(delegate as SettingsWizardDelegate) {
+        ActionMenuDelegate.initialize();
+        _delegate = delegate;
+    }
+
+    function onSelect(item as WatchUi.ActionMenuItem) as Void {
+        var id = item.getId() as String;
+        if (id.equals("qr")) {
+            _delegate.onSelect();
+        } else if (id.equals("gcm")) {
+            _delegate.onNextPage();
+        } else if (id.equals("done")) {
+            _delegate.onSelect();
+        } else if (id.equals("back")) {
+            _delegate.onBack();
+        }
+    }
+
+    function onBack() as Void {
     }
 }

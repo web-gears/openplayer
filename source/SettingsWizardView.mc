@@ -41,6 +41,9 @@ class SettingsWizardView extends WatchUi.View {
     }
 
     function onShow() as Void {
+        if (WatchUi.View has :setActionMenuIndicator) {
+            setActionMenuIndicator({:enabled => true});
+        }
     }
 
     function onUpdate(dc as Dc) as Void {
