@@ -752,4 +752,29 @@ class StorageManager {
         var val = Storage.getValue("sync_loading") as Boolean?;
         return val != null ? val : false;
     }
+
+    function saveSyncProgressDict(dict as Dictionary) as Void {
+        Storage.setValue("sync_progress", dict);
+    }
+
+    function loadSyncProgressDict() as Dictionary? {
+        return Storage.getValue("sync_progress") as Dictionary?;
+    }
+
+    function clearSyncProgress() as Void {
+        Storage.deleteValue("sync_progress");
+    }
+
+    function saveCancelRequested(val as Boolean) as Void {
+        Storage.setValue("sync_cancel", val);
+    }
+
+    function isCancelRequested() as Boolean {
+        var val = Storage.getValue("sync_cancel") as Boolean?;
+        return val != null ? val : false;
+    }
+
+    function clearCancelRequested() as Void {
+        Storage.deleteValue("sync_cancel");
+    }
 }

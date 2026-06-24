@@ -55,6 +55,12 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _finalTrackList = [];
         _syncTimer.stop();
         _syncTimer = new Timer.Timer();
+        _storage.saveSyncProgressDict({
+            "phase" => "fetching",
+            "percent" => 0,
+            "currentPlaylist" => 1,
+            "totalPlaylists" => _playlistIndexList.size()
+        });
         _syncTimer.start(method(:onInitialCacheCleared), 100, false);
     }
 
@@ -78,6 +84,12 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
         _currentPlaylistIdx = index;
         _currentPageStart = 0;
+        _storage.saveSyncProgressDict({
+            "phase" => "fetching",
+            "percent" => 0,
+            "currentPlaylist" => index + 1,
+            "totalPlaylists" => _playlistIndexList.size()
+        });
         fetchNextPage();
     }
 
@@ -150,7 +162,14 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     }
 
     function downloadNextTrack() as Void {
-        _syncTimer.stop(); 
+        _syncTimer.stop();
+
+        if (_storage.isCancelRequested()) {
+            _storage.clearCancelRequested();
+            _storage.clearSyncProgress();
+            Communications.notifySyncComplete(null);
+            return;
+        }
         
         if (_currentTrackIndex >= _syncTracksQueue.size()) {
             finalizeSync();
@@ -161,6 +180,15 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         
         if (cachedDict != null && cachedDict["serverId"] != null) {
             var progress = ((_currentTrackIndex.toFloat() / _syncTracksQueue.size()) * 100).toNumber();
+
+            _storage.saveSyncProgressDict({
+                "current" => _currentTrackIndex + 1,
+                "total" => _syncTracksQueue.size(),
+                "currentPlaylist" => _currentPlaylistIdx + 1,
+                "totalPlaylists" => _playlistIndexList.size(),
+                "phase" => "downloading",
+                "percent" => progress
+            });
             
             if (progress != _lastSentProgress && (progress % 5 == 0 || _currentTrackIndex == 0)) {
                 _lastSentProgress = progress;
@@ -264,6 +292,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     }
 
     function finalizeSync() as Void {
+        var totalTracks = _syncTracksQueue.size();
         var tracksToSave = _finalTrackList.size() > 0 ? _finalTrackList : _syncTracksQueue;
         var totalBytes = 0;
         for (var i = 0; i < tracksToSave.size(); i++) {
@@ -278,6 +307,14 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         
         _storage.saveSyncedTracks(tracksToSave);
         _storage.cleanupOrphanedCachedAudio(tracksToSave);
+
+        _storage.saveSyncProgressDict({
+            "current" => totalTracks,
+            "total" => totalTracks,
+            "phase" => "complete",
+            "percent" => 100
+        });
+
         _syncTracksQueue = [];
         _remoteTracks = [];
         _finalTrackList = [];
@@ -301,6 +338,8 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _syncTracksQueue = [];
         _remoteTracks = [];
         _finalTrackList = [];
+        _storage.clearSyncProgress();
+        _storage.clearCancelRequested();
         Communications.cancelAllRequests();
         Communications.notifySyncComplete(null);
     }

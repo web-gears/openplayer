@@ -246,6 +246,13 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             return;
         }
 
+        var statusView = new OpenPlayerSyncStatusView();
+        WatchUi.pushView(
+            statusView,
+            new OpenPlayerSyncStatusDelegate(),
+            WatchUi.SLIDE_IMMEDIATE
+        );
+
         Communications.startSync();
     }
 
@@ -268,95 +275,173 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
 }
 
 class OpenPlayerSyncStatusView extends WatchUi.View {
-    private var _statusText as String = "";
-    private var _progress as Number = 0;
-    private var _isComplete as Boolean = false;
-    private var _errorMessage as String = "";
-
     function initialize() {
         View.initialize();
     }
 
     function onLayout(dc as Dc) as Void {}
 
+    function onShow() as Void {
+        WatchUi.requestUpdate();
+    }
+
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
 
+        var storage = new StorageManager();
+        var progress = storage.loadSyncProgressDict();
+        var phase = progress != null ? progress["phase"] as String? : null;
+        var percent = progress != null ? progress["percent"] as Number? : 0;
+
         dc.drawText(
             dc.getWidth() / 2,
-            ScaleHelper.scale(dc, 20),
+            ScaleHelper.scale(dc, 15),
+            Graphics.FONT_MEDIUM,
+            "Sync",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+
+        if (phase == null) {
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() / 2,
+                Graphics.FONT_TINY,
+                "Starting...",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            return;
+        }
+
+        if (phase.equals("fetching")) {
+            var cp = progress["currentPlaylist"] as Number?;
+            var tp = progress["totalPlaylists"] as Number?;
+            if (cp != null && tp != null && tp > 0) {
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    dc.getHeight() / 2 - ScaleHelper.scale(dc, 15),
+                    Graphics.FONT_TINY,
+                    "Fetch playlist " + cp + "/" + tp,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            } else {
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    dc.getHeight() / 2 - ScaleHelper.scale(dc, 15),
+                    Graphics.FONT_TINY,
+                    "Fetching playlists...",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
+            return;
+        }
+
+        if (phase.equals("downloading")) {
+            var current = progress["current"] as Number?;
+            var total = progress["total"] as Number?;
+            if (current != null && total != null && total > 0) {
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    dc.getHeight() / 2 - ScaleHelper.scale(dc, 30),
+                    Graphics.FONT_TINY,
+                    "Track " + current + "/" + total,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
+
+            if (percent != null) {
+                var barX = ScaleHelper.scale(dc, 20);
+                var barW = dc.getWidth() - ScaleHelper.scale(dc, 40);
+                var barY = dc.getHeight() / 2 - ScaleHelper.scale(dc, 5);
+                var barH = ScaleHelper.scale(dc, 10);
+                dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
+                dc.fillRectangle(barX, barY, barW, barH);
+                dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_BLACK);
+                var fillW = (barW * percent / 100).toNumber();
+                dc.fillRectangle(barX, barY, fillW, barH);
+            }
+
+            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                Graphics.FONT_XTINY,
+                "ESC: Cancel",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            return;
+        }
+
+        if (phase.equals("complete")) {
+            var total = progress["total"] as Number?;
+            var msg = "Sync Complete!";
+            if (total != null && total > 0) {
+                msg = total + " tracks synced";
+            }
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() / 2 - ScaleHelper.scale(dc, 15),
+                Graphics.FONT_TINY,
+                msg,
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                Graphics.FONT_XTINY,
+                "ENTER: Done",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            return;
+        }
+
+        dc.drawText(
+            dc.getWidth() / 2,
+            dc.getHeight() / 2,
             Graphics.FONT_TINY,
             "Syncing...",
             Graphics.TEXT_JUSTIFY_CENTER
         );
+    }
+}
 
-        if (_progress > 0) {
-            dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
-            dc.fillRectangle(ScaleHelper.scale(dc, 20), dc.getHeight() / 2, dc.getWidth() - ScaleHelper.scale(dc, 40), ScaleHelper.scale(dc, 10));
-            dc.setColor(Graphics.COLOR_GREEN, Graphics.COLOR_BLACK);
-            var barWidth = (
-                ((dc.getWidth() - ScaleHelper.scale(dc, 40)) * _progress) /
-                100
-            ).toNumber();
-            dc.fillRectangle(ScaleHelper.scale(dc, 20), dc.getHeight() / 2, barWidth, ScaleHelper.scale(dc, 10));
+class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
+    private var _storage as StorageManager;
+
+    function initialize() {
+        BehaviorDelegate.initialize();
+        _storage = new StorageManager();
+    }
+
+    function onKey(evt as WatchUi.KeyEvent) as Boolean {
+        var key = evt.getKey();
+
+        if (key == WatchUi.KEY_ENTER) {
+            var progress = _storage.loadSyncProgressDict();
+            if (progress != null) {
+                var phase = progress["phase"] as String?;
+                if (phase != null && phase.equals("complete")) {
+                    _storage.clearSyncProgress();
+                    WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+                    return true;
+                }
+            }
+            return true;
         }
 
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(
-            dc.getWidth() / 2,
-            dc.getHeight() / 2 + ScaleHelper.scale(dc, 25),
-            Graphics.FONT_TINY,
-            _statusText,
-            Graphics.TEXT_JUSTIFY_CENTER
-        );
-
-        if (_isComplete) {
-            dc.drawText(
-                dc.getWidth() / 2,
-                dc.getHeight() / 2 + ScaleHelper.scale(dc, 25),
-                Graphics.FONT_MEDIUM,
-                "Sync Complete!",
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
-        dc.drawText(
-                dc.getWidth() / 2,
-                dc.getHeight() - ScaleHelper.scale(dc, 20),
-                Graphics.FONT_TINY,
-                "ENTER: Done",
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
+        if (key == WatchUi.KEY_ESC) {
+            var progress = _storage.loadSyncProgressDict();
+            if (progress != null) {
+                var phase = progress["phase"] as String?;
+                if (phase == null || (!phase.equals("complete") && !phase.equals("error"))) {
+                    _storage.saveCancelRequested(true);
+                }
+            }
+            _storage.clearSyncProgress();
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            return true;
         }
 
-        if (_errorMessage.length() > 0) {
-            dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_BLACK);
-            dc.drawText(
-                dc.getWidth() / 2,
-                dc.getHeight() - ScaleHelper.scale(dc, 20),
-                Graphics.FONT_TINY,
-                _errorMessage,
-                Graphics.TEXT_JUSTIFY_CENTER
-            );
-        }
-    }
-
-    function setStatus(text as String) as Void {
-        _statusText = text;
-        WatchUi.requestUpdate();
-    }
-
-    function setProgress(progress as Number) as Void {
-        _progress = progress;
-        WatchUi.requestUpdate();
-    }
-
-    function setComplete() as Void {
-        _isComplete = true;
-        WatchUi.requestUpdate();
-    }
-
-    function setError(msg as String) as Void {
-        _errorMessage = msg;
-        WatchUi.requestUpdate();
+        return false;
     }
 }
