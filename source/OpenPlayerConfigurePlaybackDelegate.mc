@@ -31,6 +31,17 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
 
         if (key == WatchUi.KEY_ENTER) {
             if (_viewMode.equals("playlists")) {
+                var token = _storage.getAuthToken();
+                if (token == null || token.length() == 0) {
+                    var wizardView = new SettingsWizardView();
+                    wizardView.setStep(SettingsWizardView.STEP_GCM_CONNECT);
+                    WatchUi.pushView(
+                        wizardView,
+                        new SettingsWizardDelegate(wizardView),
+                        WatchUi.SLIDE_IMMEDIATE
+                    );
+                    return true;
+                }
                 var playlists = _view != null ? _view.getPlaylists() : [];
                 var selectedIdx = _view != null ? _view.getSelectedIndex() : 0;
                 if (selectedIdx >= 0 && selectedIdx < playlists.size()) {

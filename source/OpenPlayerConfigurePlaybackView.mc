@@ -98,7 +98,18 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
 
     private function renderPlaylistList(dc as Dc) as Void {
         if (_playlists.size() == 0) {
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, "No synced tracks\nMENU: Setup", Graphics.TEXT_JUSTIFY_CENTER);
+            var storage = new StorageManager();
+            var token = storage.getAuthToken();
+            if (token == null || token.length() == 0) {
+                var server = storage.getServer();
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, "Press ENTER to\nconnect", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 30), Graphics.FONT_XTINY, server, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "MENU: settings", Graphics.TEXT_JUSTIFY_CENTER);
+            } else {
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, "No synced tracks\nMENU: Setup", Graphics.TEXT_JUSTIFY_CENTER);
+            }
             return;
         }
 

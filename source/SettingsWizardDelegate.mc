@@ -92,6 +92,22 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             if (key == WatchUi.KEY_ESC) {
                 _view.setStep(STEP_CHOICE);
                 return true;
+            } else if (key == WatchUi.KEY_ENTER) {
+                var username = _storage.getUsername();
+                var password = _storage.getPassword();
+                if (username.length() > 0 && password.length() > 0) {
+                    _username = username;
+                    _password = password;
+                    _serverUrl = _storage.getServer();
+                    _view.setServerUrl(_serverUrl);
+                    _view.setUsername(_username);
+                    _view.setPassword(_password);
+                    _view.clearError();
+                    saveSettings();
+                } else {
+                    _view.setError("Set GCM settings first");
+                }
+                return true;
             }
             return false;
         }
@@ -368,28 +384,30 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     function onPlaylistsForWizard(responseCode as Number, data as Dictionary?) as Void {
         if (responseCode == 200 && data != null) {
             var items = data["Items"] as Array?;
-            if (items == null) {
-                return;
-            }
-            var ids = "";
-            var names = "";
-            var counts = "";
-            for (var i = 0; i < items.size(); i++) {
-                var item = items[i] as Dictionary;
-                if (i > 0) {
-                    ids = ids + ",";
-                    names = names + "|";
-                    counts = counts + ",";
+            if (items != null) {
+                var ids = "";
+                var names = "";
+                var counts = "";
+                for (var i = 0; i < items.size(); i++) {
+                    var item = items[i] as Dictionary;
+                    if (i > 0) {
+                        ids = ids + ",";
+                        names = names + "|";
+                        counts = counts + ",";
+                    }
+                    ids = ids + (item["Id"] as String);
+                    names = names + (item["Name"] as String);
+                    var childCount = item["ChildCount"] as Number?;
+                    counts = counts + (childCount != null ? childCount : 0);
                 }
-                ids = ids + (item["Id"] as String);
-                names = names + (item["Name"] as String);
-                var childCount = item["ChildCount"] as Number?;
-                counts = counts + (childCount != null ? childCount : 0);
+                _storage.savePendingPlaylistIds(ids);
+                _storage.savePendingPlaylistNames(names);
+                _storage.savePendingPlaylistCounts(counts);
+                _storage.savePendingPlaylistResponseCode(responseCode);
             }
-            _storage.savePendingPlaylistIds(ids);
-            _storage.savePendingPlaylistNames(names);
-            _storage.savePendingPlaylistCounts(counts);
+        } else {
             _storage.savePendingPlaylistResponseCode(responseCode);
         }
+        WatchUi.requestUpdate();
     }
 }

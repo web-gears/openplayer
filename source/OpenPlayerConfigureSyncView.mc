@@ -68,8 +68,10 @@ if (rc == 200) {
             }
         } else if (rc == 401) {
             _errorMessage = "Invalid API key";
-        } else if (rc != -1 && rc != 0) {
-            _errorMessage = "Failed to load playlists";
+        } else if (rc == 0) {
+            _errorMessage = "Network error";
+        } else if (rc != -1) {
+            _errorMessage = "Failed to load playlists (" + rc + ")";
         }
     }
 

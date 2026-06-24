@@ -40,16 +40,21 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
 
     function getInitialView() as [WatchUi.Views] or
         [WatchUi.Views, WatchUi.InputDelegates] {
-        if (_storage.isConfigured()) {
+        var token = _storage.getAuthToken();
+        if (token != null && token.length() > 0) {
             var view = new OpenPlayerConfigurePlaybackView();
             return [
                 view,
                 new OpenPlayerConfigurePlaybackDelegate(view),
             ];
-        } else {
+        }
+        if (_storage.isConfigured()) {
             var wizardView = new SettingsWizardView();
+            wizardView.setStep(SettingsWizardView.STEP_GCM_CONNECT);
             return [wizardView, new SettingsWizardDelegate(wizardView)];
         }
+        var wizardView = new SettingsWizardView();
+        return [wizardView, new SettingsWizardDelegate(wizardView)];
     }
 
     function getSyncConfigurationView() as [WatchUi.Views] or

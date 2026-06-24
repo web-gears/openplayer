@@ -24,6 +24,7 @@ class SettingsWizardView extends WatchUi.View {
     private static const STEP_QR_LOADING = 11;
     private static const STEP_QR_DISPLAY = 12;
     private static const STEP_GCM_INFO = 5;
+    static const STEP_GCM_CONNECT = 5;
     private static const STEP_REVIEW = 3;
     private static const STEP_DONE = 4;
 
@@ -109,10 +110,20 @@ class SettingsWizardView extends WatchUi.View {
             var timeStr = mins + ":" + (secs < 10 ? "0" + secs : secs.toString());
             dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 30), Graphics.FONT_XTINY, timeStr + " remaining", Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_GCM_INFO) {
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 30), Graphics.FONT_TINY, "Use Garmin Connect", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 5), Graphics.FONT_TINY, "Mobile app to enter", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 20), Graphics.FONT_TINY, "server URL and API key", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ESC: back", Graphics.TEXT_JUSTIFY_CENTER);
+            var storage = new StorageManager();
+            var server = storage.getServer();
+            var username = storage.getUsername();
+            if (server.length() > 0) {
+                dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 85), Graphics.FONT_TINY, server, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 110), Graphics.FONT_TINY, username, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 65), Graphics.FONT_TINY, "ENTER: connect", Graphics.TEXT_JUSTIFY_CENTER);
+            } else {
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 30), Graphics.FONT_TINY, "Use Garmin Connect", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 5), Graphics.FONT_TINY, "Mobile app to enter", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 20), Graphics.FONT_TINY, "server URL and login", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: check settings", Graphics.TEXT_JUSTIFY_CENTER);
+            }
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 40), Graphics.FONT_XTINY, "ESC: back", Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_REVIEW) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 90), Graphics.FONT_TINY, "Server:", Graphics.TEXT_JUSTIFY_RIGHT);

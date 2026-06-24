@@ -24,7 +24,18 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
 
     function onShow() as Void {
         if (_storage.isConfigured()) {
-            loadPlaylists();
+            var token = _storage.getAuthToken();
+            if (token != null && token.length() > 0) {
+                loadPlaylists();
+            } else {
+                var wizardView = new SettingsWizardView();
+                wizardView.setStep(SettingsWizardView.STEP_GCM_CONNECT);
+                WatchUi.switchToView(
+                    wizardView,
+                    new SettingsWizardDelegate(wizardView),
+                    WatchUi.SLIDE_IMMEDIATE
+                );
+            }
         } else {
             var wizardView = new SettingsWizardView();
             WatchUi.switchToView(
@@ -47,27 +58,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
 
         _storage.saveSyncLoading(true);
         WatchUi.requestUpdate();
-
-        var token = _storage.getAuthToken();
-        if (token == null || token.length() == 0) {
-            _client.authenticateFromSettings(method(:onReAuthForPlaylists));
-            return;
-        }
         fetchPlaylists();
-    }
-
-    function onReAuthForPlaylists(
-        responseCode as Number,
-        data as Dictionary?
-    ) as Void {
-        _storage.saveSyncLoading(false);
-        if (responseCode == 200) {
-            fetchPlaylists();
-        } else {
-            _storage.savePendingPlaylistResponseCode(401);
-            _storage.setSyncError("Re-auth failed - check GCM settings");
-            WatchUi.requestUpdate();
-        }
     }
 
     function fetchPlaylists() as Void {
@@ -145,7 +136,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             return true;
         } else if (key == 5) {
             var playbackView = new OpenPlayerConfigurePlaybackView();
-            WatchUi.pushView(
+            WatchUi.switchToView(
                 playbackView,
                 new OpenPlayerConfigurePlaybackDelegate(playbackView),
                 WatchUi.SLIDE_UP

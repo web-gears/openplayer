@@ -7,7 +7,6 @@ const AUTH_METHOD_ONRESPONSE = 0;
 const PLAYLISTS_METHOD_ONRESPONSE = 1;
 const TRACKS_METHOD_ONRESPONSE = 2;
 
-(:background)
 class JellyfinClient {
     private var _storage as StorageManager;
     private var _pendingMethod as Number = 0;
