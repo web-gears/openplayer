@@ -338,7 +338,9 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _syncTracksQueue = [];
         _remoteTracks = [];
         _finalTrackList = [];
-        _storage.clearSyncProgress();
+        _storage.saveSyncProgressDict({
+            "phase" => "cancelled"
+        });
         _storage.clearCancelRequested();
         Communications.cancelAllRequests();
         Communications.notifySyncComplete(null);

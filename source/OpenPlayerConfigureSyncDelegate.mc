@@ -135,6 +135,12 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             toggleCurrentSelection();
             return true;
         } else if (key == 5) {
+            var playlists = _loadPlaylistsFallback();
+            if (playlists.size() == 0) {
+                _storage.clearPendingPlaylistResponse();
+                loadPlaylists();
+                return true;
+            }
             var playbackView = new OpenPlayerConfigurePlaybackView();
             WatchUi.switchToView(
                 playbackView,
@@ -246,14 +252,37 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             return;
         }
 
+        var estimatedTracks = 0;
+        var playlists = _storage.loadPlaylists();
+        for (var i = 0; i < playlists.size(); i++) {
+            var p = playlists[i] as JellyfinPlaylist;
+            for (var j = 0; j < _syncState.selectedPlaylistIds.size(); j++) {
+                if (p.id.equals(_syncState.selectedPlaylistIds[j] as String)) {
+                    estimatedTracks += p.trackCount;
+                }
+            }
+        }
+
+        var syncedTracks = _storage.loadSyncedTracks();
+        var newTrackEstimate = estimatedTracks > syncedTracks.size() ? estimatedTracks - syncedTracks.size() : 0;
+        var totalSyncedSize = 0;
+        for (var i = 0; i < syncedTracks.size(); i++) {
+            totalSyncedSize += syncedTracks[i].downloadSize;
+        }
+
+        _storage.saveSyncProgressDict({
+            "phase" => "confirm",
+            "playlistCount" => count,
+            "estimatedTracks" => newTrackEstimate,
+            "freeBytes" => totalSyncedSize
+        });
+
         var statusView = new OpenPlayerSyncStatusView();
         WatchUi.pushView(
             statusView,
             new OpenPlayerSyncStatusDelegate(),
             WatchUi.SLIDE_IMMEDIATE
         );
-
-        Communications.startSync();
     }
 
     function clearAll() as Void {
@@ -285,6 +314,16 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
         WatchUi.requestUpdate();
     }
 
+    function formatBytes(bytes as Number) as String {
+        if (bytes < 1024) {
+            return bytes + " B";
+        } else if (bytes < 1024 * 1024) {
+            return bytes / 1024 + " KB";
+        } else {
+            return (bytes / (1024 * 1024)).format("%.1f") + " MB";
+        }
+    }
+
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
@@ -293,14 +332,6 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
         var progress = storage.loadSyncProgressDict();
         var phase = progress != null ? progress["phase"] as String? : null;
         var percent = progress != null ? progress["percent"] as Number? : 0;
-
-        dc.drawText(
-            dc.getWidth() / 2,
-            ScaleHelper.scale(dc, 15),
-            Graphics.FONT_MEDIUM,
-            "Sync",
-            Graphics.TEXT_JUSTIFY_CENTER
-        );
 
         if (phase == null) {
             dc.drawText(
@@ -312,6 +343,69 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             );
             return;
         }
+
+        if (phase.equals("confirm")) {
+            dc.drawText(
+                dc.getWidth() / 2,
+                ScaleHelper.scale(dc, 12),
+                Graphics.FONT_TINY,
+                "Ready to Sync",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+
+            var pc = progress["playlistCount"] as Number?;
+            var et = progress["estimatedTracks"] as Number?;
+            var fb = progress["freeBytes"] as Number?;
+
+            var y = ScaleHelper.scale(dc, 40);
+            if (pc != null) {
+                dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_TINY, pc + " playlist(s) selected", Graphics.TEXT_JUSTIFY_CENTER);
+                y += ScaleHelper.scale(dc, 22);
+            }
+            if (et != null) {
+                dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_TINY, "Est. " + et + " new tracks", Graphics.TEXT_JUSTIFY_CENTER);
+                y += ScaleHelper.scale(dc, 22);
+            }
+            if (fb != null) {
+                dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_TINY, "Synced: " + formatBytes(fb), Graphics.TEXT_JUSTIFY_CENTER);
+            }
+
+            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() - ScaleHelper.scale(dc, 45),
+                Graphics.FONT_XTINY,
+                "ENTER: Start | ESC: Back",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            return;
+        }
+
+        if (phase.equals("cancelled")) {
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() / 2 - ScaleHelper.scale(dc, 15),
+                Graphics.FONT_TINY,
+                "Sync Cancelled",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                Graphics.FONT_XTINY,
+                "ENTER: Done",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            return;
+        }
+
+        dc.drawText(
+            dc.getWidth() / 2,
+            ScaleHelper.scale(dc, 15),
+            Graphics.FONT_MEDIUM,
+            "Sync",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
 
         if (phase.equals("fetching")) {
             var cp = progress["currentPlaylist"] as Number?;
@@ -420,7 +514,14 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
             var progress = _storage.loadSyncProgressDict();
             if (progress != null) {
                 var phase = progress["phase"] as String?;
-                if (phase != null && phase.equals("complete")) {
+                if (phase != null && phase.equals("confirm")) {
+                    _storage.saveSyncProgressDict({
+                        "phase" => "starting"
+                    });
+                    Communications.startSync();
+                    return true;
+                }
+                if (phase != null && (phase.equals("complete") || phase.equals("cancelled"))) {
                     _storage.clearSyncProgress();
                     WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
                     return true;
@@ -433,7 +534,12 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
             var progress = _storage.loadSyncProgressDict();
             if (progress != null) {
                 var phase = progress["phase"] as String?;
-                if (phase == null || (!phase.equals("complete") && !phase.equals("error"))) {
+                if (phase == null || phase.equals("confirm")) {
+                    _storage.clearSyncProgress();
+                    WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+                    return true;
+                }
+                if (!phase.equals("complete") && !phase.equals("cancelled")) {
                     _storage.saveCancelRequested(true);
                 }
             }

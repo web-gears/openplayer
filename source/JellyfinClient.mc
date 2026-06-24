@@ -185,7 +185,7 @@ class JellyfinClient {
             "ParentId" => playlistId,
             "IncludeItemTypes" => "Audio",
             "Recursive" => "true",
-            "Fields" => "Name",
+            "Fields" => "Name,MediaSources",
             "StartIndex" => startIndex,
             "Limit" => PAGE_SIZE,
         };
@@ -244,6 +244,12 @@ class JellyfinClient {
                         var size = source["Size"] as Number?;
                         if (size != null) {
                             downloadSize = size;
+                        }
+                    }
+                    if (downloadSize == 0) {
+                        var itemSize = item["Size"] as Number?;
+                        if (itemSize != null) {
+                            downloadSize = itemSize;
                         }
                     }
 

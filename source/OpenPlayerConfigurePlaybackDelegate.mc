@@ -43,6 +43,15 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
                     return true;
                 }
                 var playlists = _view != null ? _view.getPlaylists() : [];
+                if (playlists.size() == 0) {
+                    var syncView = new OpenPlayerConfigureSyncView();
+                    WatchUi.pushView(
+                        syncView,
+                        new OpenPlayerConfigureSyncDelegate(syncView),
+                        WatchUi.SLIDE_IMMEDIATE
+                    );
+                    return true;
+                }
                 var selectedIdx = _view != null ? _view.getSelectedIndex() : 0;
                 if (selectedIdx >= 0 && selectedIdx < playlists.size()) {
                     _storage.savePlaybackPlaylistSelection(selectedIdx);

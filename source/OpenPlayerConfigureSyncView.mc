@@ -23,6 +23,10 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
 
     function onShow() as Void {
         _initialized = false;
+        var storage = new StorageManager();
+        if (storage.getPendingPlaylistResponseCode() != 200) {
+            _isLoading = true;
+        }
         _loadPlaylists();
     }
 
@@ -140,11 +144,13 @@ if (rc == 200) {
                     : "No playlists found",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+            var hint = _errorMessage.length() > 0 ? "LAP: Retry | ESC: Back" : "LAP: Retry";
             dc.drawText(
                 dc.getWidth() / 2,
                 dc.getHeight() / 2 + ScaleHelper.scale(dc, 10),
-                Graphics.FONT_TINY,
-                "LAP: Close",
+                Graphics.FONT_XTINY,
+                hint,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;
@@ -224,11 +230,16 @@ if (rc == 200) {
         );
         
         dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
+        var syncedTracks = storage.loadSyncedTracks();
+        var totalSyncedSize = 0;
+        for (var i = 0; i < syncedTracks.size(); i++) {
+            totalSyncedSize += syncedTracks[i].downloadSize;
+        }
         dc.drawText(
             dc.getWidth() / 2,
             dc.getHeight() - ScaleHelper.scale(dc, 45),
             Graphics.FONT_XTINY,
-            "UP/DOWN: scroll\nLAP: play",
+            "Synced: " + formatSize(totalSyncedSize) + " | LAP: play",
             Graphics.TEXT_JUSTIFY_CENTER
         );
     }

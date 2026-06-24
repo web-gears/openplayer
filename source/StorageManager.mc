@@ -365,11 +365,6 @@ class StorageManager {
         Storage.deleteValue("sync_state");
         Storage.deleteValue("synced_tracks_str");
         Storage.deleteValue("synced_tracks");
-        Storage.deleteValue("cached_playlists");
-        Storage.deleteValue("pending_playlist_ids");
-        Storage.deleteValue("pending_playlist_names");
-        Storage.deleteValue("pending_playlist_counts");
-        Storage.deleteValue("pending_response_code");
         Storage.deleteValue("sync_error_msg");
         Storage.deleteValue("sync_loading");
         Storage.deleteValue("current_playlist_index");
