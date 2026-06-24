@@ -720,6 +720,92 @@ class StorageManager {
         return code != null ? code : -1;
     }
 
+    function savePendingSyncTracks(tracks as Array) as Void {
+        var parts = [];
+        for (var i = 0; i < tracks.size(); i++) {
+            var t = tracks[i];
+            var id = "";
+            var serverId = "";
+            var name = "";
+            var albumName = "";
+            var artistName = "";
+            var durationSeconds = 0;
+            var downloadSize = 0;
+            var playlistId = "";
+            if (t instanceof Dictionary) {
+                var dict = t as Dictionary;
+                id = dict["id"] as String?;
+                serverId = dict["serverId"] as String?;
+                name = dict["name"] as String?;
+                albumName = dict["albumName"] as String?;
+                artistName = dict["artistName"] as String?;
+                durationSeconds = dict["durationSeconds"] as Number?;
+                downloadSize = dict["downloadSize"] as Number?;
+                playlistId = dict["playlistId"] as String?;
+            }
+            parts.add(
+                id.toString() +
+                TRACK_DELIM + (serverId != null ? serverId : "") +
+                TRACK_DELIM + (name != null ? name : "") +
+                TRACK_DELIM + (albumName != null ? albumName : "") +
+                TRACK_DELIM + (artistName != null ? artistName : "") +
+                TRACK_DELIM + durationSeconds.toString() +
+                TRACK_DELIM + downloadSize.toString() +
+                TRACK_DELIM + (playlistId != null ? playlistId : "")
+            );
+        }
+        var encoded = "";
+        for (var i = 0; i < parts.size(); i++) {
+            if (i > 0) { encoded = encoded + RECORD_DELIM; }
+            encoded = encoded + parts[i];
+        }
+        Storage.setValue("pending_sync_tracks_str", encoded);
+    }
+
+    function loadPendingSyncTracks() as Array {
+        var tracks = [];
+        var raw = Storage.getValue("pending_sync_tracks_str");
+        if (raw instanceof Array) {
+            return raw as Array;
+        }
+        if (raw instanceof String) {
+            var encoded = raw as String;
+            if (encoded.length() > 0) {
+                var records = ScaleHelper.splitString(encoded, RECORD_DELIM);
+                for (var i = 0; i < records.size(); i++) {
+                    var fields = ScaleHelper.splitString(records[i], TRACK_DELIM);
+                    if (fields.size() >= 8) {
+                        var idStr = fields[0];
+                        var trackServerId = fields[1];
+                        var trackName = fields[2];
+                        var trackAlbum = fields[3];
+                        var trackArtist = fields[4];
+                        var trackDuration = fields[5].toNumber();
+                        var trackSize = fields[6].toNumber();
+                        var trackPlaylistId = fields[7];
+                        if (trackServerId.length() > 0 && trackName.length() > 0) {
+                            tracks.add({
+                                "id" => idStr,
+                                "serverId" => trackServerId,
+                                "name" => trackName,
+                                "albumName" => trackAlbum,
+                                "artistName" => trackArtist,
+                                "durationSeconds" => trackDuration,
+                                "downloadSize" => trackSize,
+                                "playlistId" => trackPlaylistId
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        return tracks;
+    }
+
+    function clearPendingSyncTracks() as Void {
+        Storage.deleteValue("pending_sync_tracks_str");
+    }
+
     function clearPendingPlaylistResponse() as Void {
         Storage.deleteValue("pending_response_code");
         Storage.deleteValue("pending_playlist_ids");

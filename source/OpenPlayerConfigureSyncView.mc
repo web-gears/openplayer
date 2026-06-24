@@ -79,20 +79,6 @@ if (rc == 200) {
         }
     }
 
-    function formatSize(bytes as Number) as String {
-        if (bytes < 1024) {
-            return bytes + " B";
-        } else if (bytes < 1024 * 1024) {
-            return bytes / 1024 + " KB";
-        } else if (bytes < 1024 * 1024 * 1024) {
-            return bytes / (1024 * 1024) + " MB";
-        } else {
-            return (
-                (bytes / ((1024 * 1024 * 1024) as Float)).format("%.1f") + " GB"
-            );
-        }
-    }
-
     function onUpdate(dc as Dc) as Void {
         var storage = new StorageManager();
         _isLoading = storage.isSyncLoading();
@@ -230,16 +216,11 @@ if (rc == 200) {
         );
         
         dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
-        var syncedTracks = storage.loadSyncedTracks();
-        var totalSyncedSize = 0;
-        for (var i = 0; i < syncedTracks.size(); i++) {
-            totalSyncedSize += syncedTracks[i].downloadSize;
-        }
         dc.drawText(
             dc.getWidth() / 2,
             dc.getHeight() - ScaleHelper.scale(dc, 45),
             Graphics.FONT_XTINY,
-            "Synced: " + formatSize(totalSyncedSize) + " | LAP: play",
+            "LAP: play",
             Graphics.TEXT_JUSTIFY_CENTER
         );
     }

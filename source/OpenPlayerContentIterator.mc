@@ -85,6 +85,7 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
                 }
             }
         }
+        allMetas = [];
 
         for (var i = 0; i < _tracks.size(); i++) {
             if (_contentRefs[i] != null) { continue; }

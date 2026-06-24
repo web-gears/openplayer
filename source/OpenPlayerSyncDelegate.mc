@@ -2,66 +2,82 @@ import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.Media;
 import Toybox.PersistedContent;
-import Toybox.Timer;
 import Toybox.System;
-import Toybox.Application;
 
 (:background)
 class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     private var _storage as StorageManager;
     private var _client as JellyfinClient;
-    private var _playlistIndexList as Array = [];
     private var _currentTrackIndex as Number = 0;
-    private var _currentPlaylistIdx as Number = 0;
-    private var _currentPageStart as Number = 0;
-    private var _syncTimer as Timer.Timer;
     
     private var _syncTracksQueue as Array<Dictionary> = [];
-    private var _remoteTracks as Array<Dictionary> = [];
     private var _finalTrackList as Array = [];
     private var _lastSentProgress as Number = -1;
-
-    private const PAGE_SIZE = 5;
 
     function initialize() {
         SyncDelegate.initialize();
         _storage = new StorageManager();
         _client = new JellyfinClient(_storage);
-        _syncTimer = new Timer.Timer();
         _lastSentProgress = -1;
         _syncTracksQueue = [];
-        _remoteTracks = [];
         _finalTrackList = [];
         _currentTrackIndex = 0;
     }
 
     function onStartSync() as Void {
+        System.println("SYNC: onStartSync");
         var token = _storage.getAuthToken();
         if (token == null || token.length() == 0) {
+            System.println("SYNC: no token, re-auth");
             _client.authenticateFromSettings(method(:onReAuthResult));
             return;
         }
 
-        var syncState = _storage.loadSyncState();
-        var selectedIds = syncState.selectedPlaylistIds;
-        if (selectedIds == null || selectedIds.size() == 0) {
+        var pendingTracks = _storage.loadPendingSyncTracks();
+        System.println("SYNC: pending tracks loaded=" + pendingTracks.size());
+        if (pendingTracks.size() == 0) {
+            System.println("SYNC: no pending tracks");
             Communications.notifySyncComplete(null);
             return;
         }
 
-        _playlistIndexList = selectedIds;
         _syncTracksQueue = [];
-        _remoteTracks = [];
         _finalTrackList = [];
-        _syncTimer.stop();
-        _syncTimer = new Timer.Timer();
+        var localTracks = _storage.loadSyncedTracks();
+        var localIds = {};
+        for (var i = 0; i < localTracks.size(); i++) {
+            var t = localTracks[i] as JellyfinTrack;
+            if (t.id != null) {
+                localIds[t.id.toString()] = true;
+            }
+        }
+
+        for (var i = 0; i < pendingTracks.size(); i++) {
+            var track = pendingTracks[i] as Dictionary;
+            var trackId = track["id"] != null ? track["id"].toString() : "";
+            if (localIds[trackId]) {
+                _finalTrackList.add(track);
+            } else {
+                _syncTracksQueue.add(track);
+                _finalTrackList.add(track);
+            }
+        }
+        System.println("SYNC: toDownload=" + _syncTracksQueue.size() + " finalList=" + _finalTrackList.size());
+
+        _currentTrackIndex = 0;
         _storage.saveSyncProgressDict({
-            "phase" => "fetching",
+            "phase" => "downloading",
             "percent" => 0,
-            "currentPlaylist" => 1,
-            "totalPlaylists" => _playlistIndexList.size()
+            "current" => 0,
+            "total" => _syncTracksQueue.size()
         });
-        _syncTimer.start(method(:onInitialCacheCleared), 100, false);
+
+        if (_syncTracksQueue.size() > 0) {
+            downloadNextTrack();
+        } else {
+            System.println("SYNC: nothing to download, finalizing");
+            finalizeSync();
+        }
     }
 
     function onReAuthResult(responseCode as Number, data as Dictionary?) as Void {
@@ -72,99 +88,9 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
     }
 
-    function onInitialCacheCleared() as Void {
-        _syncTimer.stop();
-        fetchTracksFromSelectedPlaylist(0);
-    }
-
-    function fetchTracksFromSelectedPlaylist(index as Number) as Void {
-        if (index >= _playlistIndexList.size()) {
-            buildSyncPlan();
-            return;
-        }
-        _currentPlaylistIdx = index;
-        _currentPageStart = 0;
-        _storage.saveSyncProgressDict({
-            "phase" => "fetching",
-            "percent" => 0,
-            "currentPlaylist" => index + 1,
-            "totalPlaylists" => _playlistIndexList.size()
-        });
-        fetchNextPage();
-    }
-
-    function fetchNextPage() as Void {
-        var playlistId = _playlistIndexList[_currentPlaylistIdx] as String;
-        _client.getPlaylistTracks(playlistId, _currentPageStart, method(:onSelectedPlaylistTracksLoaded));
-    }
-
-    function buildSyncPlan() as Void {
-        var localTracks = _storage.loadSyncedTracks();
-        var localIds = {};
-        for (var i = 0; i < localTracks.size(); i++) {
-            var t = localTracks[i] as JellyfinTrack;
-            if (t.id != null) {
-                localIds[t.id.toString()] = true;
-            }
-        }
-
-        _syncTracksQueue = [];
-        _finalTrackList = [];
-
-        for (var i = 0; i < _remoteTracks.size(); i++) {
-            var remote = _remoteTracks[i] as Dictionary;
-            var remoteId = remote["id"] != null ? remote["id"].toString() : "";
-            if (localIds[remoteId]) {
-                _finalTrackList.add(remote);
-            } else {
-                _syncTracksQueue.add(remote);
-                _finalTrackList.add(remote);
-            }
-        }
-
-        _currentTrackIndex = 0;
-        if (_syncTracksQueue.size() > 0) {
-            downloadNextTrack();
-        } else {
-            finalizeSync();
-        }
-    }
-
-    function onSelectedPlaylistTracksLoaded(responseCode as Number, tracks as Array, playlistIndex as Number) as Void {
-        if (responseCode == 200 && tracks != null) {
-            for (var i = 0; i < tracks.size(); i++) {
-                if (tracks[i] == null) { continue; }
-                if (!_storage.canSyncTrack(_remoteTracks.size())) { break; }
-                
-                var track = tracks[i] as JellyfinTrack;
-                _remoteTracks.add({
-                    "id" => track.id,
-                    "serverId" => track.serverId,
-                    "name" => track.name,
-                    "albumName" => track.albumName,
-                    "artistName" => track.artistName,
-                    "durationSeconds" => track.durationSeconds,
-                    "downloadSize" => track.downloadSize,
-                    "playlistId" => track.playlistId
-                });
-            }
-        }
-
-        if (tracks != null && tracks.size() >= PAGE_SIZE) {
-            _currentPageStart = _currentPageStart + PAGE_SIZE;
-            
-            _syncTimer.stop();
-            _syncTimer = new Timer.Timer();
-            _syncTimer.start(method(:fetchNextPage), 50, false);
-        } else {
-            fetchTracksFromSelectedPlaylist(_currentPlaylistIdx + 1);
-        }
-    }
-
     function downloadNextTrack() as Void {
-        _syncTimer.stop();
-
         if (_storage.isCancelRequested()) {
+            System.println("SYNC: cancel requested");
             _storage.clearCancelRequested();
             _storage.clearSyncProgress();
             Communications.notifySyncComplete(null);
@@ -172,6 +98,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
         
         if (_currentTrackIndex >= _syncTracksQueue.size()) {
+            System.println("SYNC: all tracks downloaded, finalizing");
             finalizeSync();
             return;
         }
@@ -184,8 +111,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
             _storage.saveSyncProgressDict({
                 "current" => _currentTrackIndex + 1,
                 "total" => _syncTracksQueue.size(),
-                "currentPlaylist" => _currentPlaylistIdx + 1,
-                "totalPlaylists" => _playlistIndexList.size(),
                 "phase" => "downloading",
                 "percent" => progress
             });
@@ -200,13 +125,12 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
             if (dur != null && dur > 1200) {
                 bitrate = 128000;
             }
+            System.println("SYNC: downloading track " + (_currentTrackIndex + 1) + "/" + _syncTracksQueue.size());
             _client.downloadAndSaveTrack(cachedDict["serverId"] as String, method(:onTrackDownloaded), bitrate);
         } else {
+            System.println("SYNC: skipping null track at " + _currentTrackIndex);
             _currentTrackIndex++;
-            
-            _syncTimer.stop();
-            _syncTimer = new Timer.Timer();
-            _syncTimer.start(method(:onSyncTimerExpired), 50, false);
+            downloadNextTrack();
         }
     }
 
@@ -243,7 +167,9 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     }
 
     function onTrackDownloaded(responseCode as Number, data as Null or Dictionary or String or PersistedContent.Iterator) as Void {
+        System.println("SYNC: onTrackDownloaded rc=" + responseCode + " track=" + _currentTrackIndex);
         if (responseCode != 200) {
+            System.println("SYNC: track download failed, removing from final list");
             var failedTrack = _syncTracksQueue[_currentTrackIndex];
             if (failedTrack != null) {
                 var failedId = getTrackValue(failedTrack, "id");
@@ -260,6 +186,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                 _finalTrackList = newFinalList;
             }
         } else if (responseCode == 200 && data != null) {
+            System.println("SYNC: track downloaded successfully");
             var cachedDict = _syncTracksQueue[_currentTrackIndex];
             if (cachedDict != null) {
                 var trackId = cachedDict["id"] != null ? cachedDict["id"].toString() : null;
@@ -280,18 +207,15 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _currentTrackIndex++;
 
         if (_currentTrackIndex >= _syncTracksQueue.size()) {
+            System.println("SYNC: all tracks done, finalizing");
             finalizeSync();
         } else {
             downloadNextTrack();
         }
     }
 
-    function onSyncTimerExpired() as Void {
-        _syncTimer.stop();
-        downloadNextTrack();
-    }
-
     function finalizeSync() as Void {
+        System.println("SYNC: finalizeSync queue=" + _syncTracksQueue.size() + " finalList=" + _finalTrackList.size());
         var totalTracks = _syncTracksQueue.size();
         var tracksToSave = _finalTrackList.size() > 0 ? _finalTrackList : _syncTracksQueue;
         var totalBytes = 0;
@@ -308,15 +232,20 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _storage.saveSyncedTracks(tracksToSave);
         _storage.cleanupOrphanedCachedAudio(tracksToSave);
 
-        _storage.saveSyncProgressDict({
+        var prevProgress = _storage.loadSyncProgressDict();
+        var fetchError = prevProgress != null ? prevProgress["fetchError"] as String? : null;
+        var progress = {
             "current" => totalTracks,
             "total" => totalTracks,
             "phase" => "complete",
             "percent" => 100
-        });
+        };
+        if (fetchError != null) {
+            progress["fetchError"] = fetchError;
+        }
+        _storage.saveSyncProgressDict(progress);
 
         _syncTracksQueue = [];
-        _remoteTracks = [];
         _finalTrackList = [];
 
         var syncState = _storage.loadSyncState();
@@ -334,9 +263,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     }
 
     function onStopSync() as Void {
-        _syncTimer.stop();
         _syncTracksQueue = [];
-        _remoteTracks = [];
         _finalTrackList = [];
         _storage.saveSyncProgressDict({
             "phase" => "cancelled"

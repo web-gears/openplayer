@@ -239,6 +239,10 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         }
     }
 
+    private var _pendingTracks as Array = [];
+    private var _currentFetchPlaylistIdx as Number = 0;
+    private var _currentFetchPageStart as Number = 0;
+
     function updateStateFromView() as Void {
         _storage.saveSyncState(_syncState);
     }
@@ -252,29 +256,16 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             return;
         }
 
-        var estimatedTracks = 0;
-        var playlists = _storage.loadPlaylists();
-        for (var i = 0; i < playlists.size(); i++) {
-            var p = playlists[i] as JellyfinPlaylist;
-            for (var j = 0; j < _syncState.selectedPlaylistIds.size(); j++) {
-                if (p.id.equals(_syncState.selectedPlaylistIds[j] as String)) {
-                    estimatedTracks += p.trackCount;
-                }
-            }
-        }
+        _pendingTracks = [];
+        _currentFetchPlaylistIdx = 0;
+        _currentFetchPageStart = 0;
 
-        var syncedTracks = _storage.loadSyncedTracks();
-        var newTrackEstimate = estimatedTracks > syncedTracks.size() ? estimatedTracks - syncedTracks.size() : 0;
-        var totalSyncedSize = 0;
-        for (var i = 0; i < syncedTracks.size(); i++) {
-            totalSyncedSize += syncedTracks[i].downloadSize;
-        }
-
+        _storage.saveCancelRequested(false);
         _storage.saveSyncProgressDict({
-            "phase" => "confirm",
-            "playlistCount" => count,
-            "estimatedTracks" => newTrackEstimate,
-            "freeBytes" => totalSyncedSize
+            "phase" => "fetching_tracks",
+            "percent" => 0,
+            "currentPlaylist" => 1,
+            "totalPlaylists" => count
         });
 
         var statusView = new OpenPlayerSyncStatusView();
@@ -283,6 +274,79 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             new OpenPlayerSyncStatusDelegate(),
             WatchUi.SLIDE_IMMEDIATE
         );
+
+        fetchNextForegroundBatch();
+    }
+
+    function fetchNextForegroundBatch() as Void {
+        if (_storage.isCancelRequested()) {
+            _storage.clearCancelRequested();
+            _pendingTracks = [];
+            return;
+        }
+        var ids = _syncState.selectedPlaylistIds;
+        if (_currentFetchPlaylistIdx >= ids.size()) {
+            onAllForegroundTracksFetched();
+            return;
+        }
+        _client.getPlaylistTracks(
+            ids[_currentFetchPlaylistIdx] as String,
+            _currentFetchPageStart,
+            method(:onForegroundTracksFetched)
+        );
+    }
+
+    function onForegroundTracksFetched(rc as Number, tracks as Array, pageStart as Number) as Void {
+        if (rc == 200 && tracks != null) {
+            for (var i = 0; i < tracks.size(); i++) {
+                var t = tracks[i] as JellyfinTrack;
+                if (t != null) {
+                    _pendingTracks.add({
+                        "id" => t.id,
+                        "serverId" => t.serverId,
+                        "name" => t.name,
+                        "albumName" => t.albumName,
+                        "artistName" => t.artistName,
+                        "durationSeconds" => t.durationSeconds,
+                        "downloadSize" => t.downloadSize,
+                        "playlistId" => t.playlistId
+                    });
+                }
+            }
+            if (tracks.size() >= 5) {
+                _currentFetchPageStart += 5;
+                fetchNextForegroundBatch();
+                return;
+            }
+        }
+        _currentFetchPlaylistIdx++;
+        _currentFetchPageStart = 0;
+        _storage.saveSyncProgressDict({
+            "phase" => "fetching_tracks",
+            "percent" => (_currentFetchPlaylistIdx.toFloat() / _syncState.selectedPlaylistIds.size() * 100).toNumber(),
+            "currentPlaylist" => _currentFetchPlaylistIdx + 1,
+            "totalPlaylists" => _syncState.selectedPlaylistIds.size()
+        });
+        WatchUi.requestUpdate();
+        fetchNextForegroundBatch();
+    }
+
+    function onAllForegroundTracksFetched() as Void {
+        _storage.savePendingSyncTracks(_pendingTracks);
+        var totalBytes = 0;
+        for (var i = 0; i < _pendingTracks.size(); i++) {
+            var t = _pendingTracks[i] as Dictionary;
+            var size = t["downloadSize"] as Number?;
+            if (size != null) { totalBytes += size; }
+        }
+        _storage.saveSyncProgressDict({
+            "phase" => "confirm",
+            "playlistCount" => _syncState.selectedPlaylistIds.size(),
+            "estimatedTracks" => _pendingTracks.size(),
+            "freeBytes" => totalBytes
+        });
+        _pendingTracks = [];
+        WatchUi.requestUpdate();
     }
 
     function clearAll() as Void {
@@ -312,16 +376,6 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
 
     function onShow() as Void {
         WatchUi.requestUpdate();
-    }
-
-    function formatBytes(bytes as Number) as String {
-        if (bytes < 1024) {
-            return bytes + " B";
-        } else if (bytes < 1024 * 1024) {
-            return bytes / 1024 + " KB";
-        } else {
-            return (bytes / (1024 * 1024)).format("%.1f") + " MB";
-        }
     }
 
     function onUpdate(dc as Dc) as Void {
@@ -355,7 +409,6 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
 
             var pc = progress["playlistCount"] as Number?;
             var et = progress["estimatedTracks"] as Number?;
-            var fb = progress["freeBytes"] as Number?;
 
             var y = ScaleHelper.scale(dc, 40);
             if (pc != null) {
@@ -366,9 +419,6 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
                 dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_TINY, "Est. " + et + " new tracks", Graphics.TEXT_JUSTIFY_CENTER);
                 y += ScaleHelper.scale(dc, 22);
             }
-            if (fb != null) {
-                dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_TINY, "Synced: " + formatBytes(fb), Graphics.TEXT_JUSTIFY_CENTER);
-            }
 
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
             dc.drawText(
@@ -376,6 +426,36 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
                 dc.getHeight() - ScaleHelper.scale(dc, 45),
                 Graphics.FONT_XTINY,
                 "ENTER: Start | ESC: Back",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            return;
+        }
+
+        if (phase.equals("fetching_tracks")) {
+            dc.drawText(
+                dc.getWidth() / 2,
+                ScaleHelper.scale(dc, 12),
+                Graphics.FONT_TINY,
+                "Fetching track data...",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            var cp = progress["currentPlaylist"] as Number?;
+            var tp = progress["totalPlaylists"] as Number?;
+            if (cp != null && tp != null && tp > 0) {
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    ScaleHelper.scale(dc, 45),
+                    Graphics.FONT_TINY,
+                    "Playlist " + cp + "/" + tp,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
+            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                Graphics.FONT_XTINY,
+                "ESC: Cancel",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             return;
@@ -410,7 +490,16 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
         if (phase.equals("fetching")) {
             var cp = progress["currentPlaylist"] as Number?;
             var tp = progress["totalPlaylists"] as Number?;
-            if (cp != null && tp != null && tp > 0) {
+            var err = progress["fetchError"] as String?;
+            if (err != null) {
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    dc.getHeight() / 2 - ScaleHelper.scale(dc, 15),
+                    Graphics.FONT_XTINY,
+                    err,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            } else if (cp != null && tp != null && tp > 0) {
                 dc.drawText(
                     dc.getWidth() / 2,
                     dc.getHeight() / 2 - ScaleHelper.scale(dc, 15),
@@ -468,6 +557,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
 
         if (phase.equals("complete")) {
             var total = progress["total"] as Number?;
+            var err = progress["fetchError"] as String?;
             var msg = "Sync Complete!";
             if (total != null && total > 0) {
                 msg = total + " tracks synced";
@@ -479,6 +569,16 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
                 msg,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            if (err != null) {
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    dc.getHeight() / 2 + ScaleHelper.scale(dc, 10),
+                    Graphics.FONT_XTINY,
+                    err,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
             dc.drawText(
                 dc.getWidth() / 2,
                 dc.getHeight() - ScaleHelper.scale(dc, 15),

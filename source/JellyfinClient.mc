@@ -85,6 +85,8 @@ class JellyfinClient {
         if (_pendingMethod != AUTH_METHOD_ONRESPONSE) {
             return;
         }
+        _pendingMethod = -1;
+
         if (responseCode == 200 && data != null) {
             var token = data["AccessToken"] as String?;
             var userInfo = data["User"] as Dictionary?;
@@ -146,6 +148,7 @@ class JellyfinClient {
         if (_pendingMethod != PLAYLISTS_METHOD_ONRESPONSE) {
             return;
         }
+        _pendingMethod = -1;
 
         if (responseCode == 200 && data != null) {
             _callback.invoke(200, data);
@@ -180,19 +183,15 @@ class JellyfinClient {
             return;
         }
 
-        var url = buildUrl(server, "/Items");
-        var params = {
-            "ParentId" => playlistId,
-            "IncludeItemTypes" => "Audio",
-            "Recursive" => "true",
-            "Fields" => "Name,MediaSources",
-            "StartIndex" => startIndex,
-            "Limit" => PAGE_SIZE,
-        };
+        var url = buildUrl(server, "/Playlists/" + playlistId + "/Items") +
+            "?IncludeItemTypes=Audio" +
+            "&Fields=Name" +
+            "&StartIndex=" + startIndex.toString() +
+            "&Limit=" + PAGE_SIZE.toString();
 
         Communications.makeWebRequest(
             url,
-            params,
+            null,
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
                 :headers => {
@@ -211,6 +210,7 @@ class JellyfinClient {
         if (_pendingMethod != TRACKS_METHOD_ONRESPONSE) {
             return;
         }
+        _pendingMethod = -1;
 
         if (responseCode == 200 && data != null) {
             var items = data["Items"] as Array?;
