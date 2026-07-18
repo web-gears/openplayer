@@ -25,6 +25,55 @@ A music and podcast player for Garmin smartwatch, syncing with Jellyfin media se
 - Jellyfin server with public access
 - Jellyfin user account credentials
 
+## Getting Started
+
+### 1. Install
+
+Install OpenPlayer from the [Garmin Connect IQ Store](https://apps.garmin.com/apps/261eb561-66a9-448f-8ef0-9d3a5b22652a) to your watch via Garmin Connect Mobile.
+
+### 2. Connect to your Jellyfin server
+
+Open OpenPlayer on your watch. On first launch you'll see a connect prompt. Press **ENTER** to proceed to the setup screen.
+
+**Garmin Connect Mobile (recommended):** Enter your server URL, username, and password in the Garmin Connect Mobile app under **Device > Apps > OpenPlayer > Settings**. On the watch, press ENTER to connect once the fields are filled.
+
+**QR code:** From the setup screen, press **UP** to switch to the QR code flow. A QR code is displayed on the watch. Scan it with your phone to open a secure form where you enter your Jellyfin server URL, username, and password. The credentials are transmitted to the watch and saved.
+
+After entering credentials, the watch displays a review screen showing your server URL and username. Press ENTER to save.
+
+### 3. Sync playlists
+
+After setup you'll see a list of playlists from your Jellyfin server. Use UP/DOWN to scroll and ENTER to toggle a playlist for syncing. Press ENTER on the sync prompt to download the selected playlists to your watch. Tracks are stored locally for offline playback.
+
+### 4. Play music
+
+From the main playback screen:
+
+1. **ENTER** to connect and load synced tracks.
+2. Select a playlist, then select a track.
+3. Use Garmin's native music controls (or the watch's media widget) to play, pause, skip, and adjust volume.
+
+### 5. Manage playlists and storage
+
+Press **Menu** (or the action menu on touch devices) from the playback or sync screens to access:
+
+- **Settings** — Re-run the setup wizard to change server or credentials.
+- **Sync playlists** — Select playlists, review number of tracks, and start syncing.
+- **Clear All Downloads** — Remove all synced tracks from watch storage.
+- **About** — App version and developer info.
+
+### Button navigation
+
+| Action | Button |
+|--------|--------|
+| Select / Confirm | ENTER |
+| Scroll up | UP |
+| Scroll down | DOWN |
+| Back | ESC / LAP |
+| Menu / Options | START (long-press on supported models) |
+
+Touch-enabled watches (Venu X1, Venu 4, Vivoactive 5/6) support tap to select and swipe to scroll.
+
 ## Privacy
 
 All data is stored locally, encrypted with your Garmin watch.

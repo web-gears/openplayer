@@ -1,7 +1,6 @@
 import Toybox.WatchUi;
 import Toybox.Lang;
 import Toybox.Graphics;
-import Toybox.Communications;
 import ScaleHelper;
 
 class OpenPlayerOptionsView extends WatchUi.View {
@@ -103,20 +102,6 @@ class OpenPlayerOptionsView extends WatchUi.View {
                 new OpenPlayerConfigureSyncDelegate(syncView),
                 WatchUi.SLIDE_IMMEDIATE
             );
-        } else if (label.equals("Sync Now")) {
-            if (!storage.isConfigured()) {
-                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-                WatchUi.showToast("Configure server first", null);
-                return;
-            }
-            var syncState = storage.loadSyncState();
-            if (syncState.selectedPlaylistIds == null || syncState.selectedPlaylistIds.size() == 0) {
-                WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-                WatchUi.showToast("Select playlists first", null);
-                return;
-            }
-            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
-            Communications.startSync();
         } else if (label.equals("Remove this Playlist")) {
             if (_playlistId != null && _playlistId.length() > 0) {
                 var confirmView = new ConfirmActionView("Remove Playlist?");

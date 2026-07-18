@@ -150,9 +150,6 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         var menu = new WatchUi.ActionMenu(null);
         var playlistId = _view != null ? _view.getSelectedPlaylistId() : null;
         if (_storage.isConfigured()) {
-            menu.addItem(new WatchUi.ActionMenuItem({:label => "Sync Now"}, "sync_now"));
-        }
-        if (_storage.isConfigured()) {
             menu.addItem(new WatchUi.ActionMenuItem({:label => "Sync playlists"}, "sync_playlists"));
         }
         menu.addItem(new WatchUi.ActionMenuItem({:label => "Settings"}, "settings"));
@@ -273,9 +270,6 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         var options = [] as Array;
         var playlistId = _view != null ? _view.getSelectedPlaylistId() : null;
 
-        if (_storage.isConfigured()) {
-            options.add("Sync Now");
-        }
         if (_storage.isConfigured()) {
             options.add("Sync playlists");
         }

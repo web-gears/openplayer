@@ -13,6 +13,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     private var _syncTracksQueue as Array<Dictionary> = [];
     private var _finalTrackList as Array = [];
     private var _lastSentProgress as Number = -1;
+    private var _syncInProgress as Boolean = false;
 
     function initialize() {
         SyncDelegate.initialize();
@@ -22,13 +23,20 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _syncTracksQueue = [];
         _finalTrackList = [];
         _currentTrackIndex = 0;
+        _syncInProgress = false;
     }
 
     function onStartSync() as Void {
+        if (_syncInProgress) {
+            System.println("SYNC: onStartSync re-entry blocked");
+            return;
+        }
+        _syncInProgress = true;
         System.println("SYNC: onStartSync");
         var token = _storage.getAuthToken();
         if (token == null || token.length() == 0) {
             System.println("SYNC: no token, re-auth");
+            _syncInProgress = false;
             _client.authenticateFromSettings(method(:onReAuthResult));
             return;
         }
@@ -37,6 +45,13 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         System.println("SYNC: pending tracks loaded=" + pendingTracks.size());
         if (pendingTracks.size() == 0) {
             System.println("SYNC: no pending tracks");
+            _storage.saveSyncProgressDict({
+                "phase" => "complete",
+                "percent" => 100,
+                "current" => 0,
+                "total" => 0
+            });
+            _syncInProgress = false;
             Communications.notifySyncComplete(null);
             return;
         }
@@ -82,8 +97,10 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
 
     function onReAuthResult(responseCode as Number, data as Dictionary?) as Void {
         if (responseCode == 200) {
+            _syncInProgress = false;
             onStartSync();
         } else {
+            _syncInProgress = false;
             Communications.notifySyncComplete(null);
         }
     }
@@ -93,6 +110,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
             System.println("SYNC: cancel requested");
             _storage.clearCancelRequested();
             _storage.clearSyncProgress();
+            _syncInProgress = false;
             Communications.notifySyncComplete(null);
             return;
         }
@@ -215,7 +233,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     }
 
     function finalizeSync() as Void {
-        System.println("SYNC: finalizeSync queue=" + _syncTracksQueue.size() + " finalList=" + _finalTrackList.size());
         var totalTracks = _syncTracksQueue.size();
         var tracksToSave = _finalTrackList.size() > 0 ? _finalTrackList : _syncTracksQueue;
         var totalBytes = 0;
@@ -228,9 +245,9 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                 }
             }
         }
-        
+
         _storage.saveSyncedTracks(tracksToSave);
-        _storage.cleanupOrphanedCachedAudio(tracksToSave);
+        _storage.clearPendingSyncTracks();
 
         var prevProgress = _storage.loadSyncProgressDict();
         var fetchError = prevProgress != null ? prevProgress["fetchError"] as String? : null;
@@ -245,26 +262,33 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
         _storage.saveSyncProgressDict(progress);
 
-        _syncTracksQueue = [];
-        _finalTrackList = [];
-
         var syncState = _storage.loadSyncState();
         syncState.lastSyncTimestamp = System.getTimer();
         syncState.totalSizeBytes = totalBytes;
         _storage.saveSyncState(syncState);
 
-        Communications.notifySyncProgress(100);
+        _syncTracksQueue = [];
+        _finalTrackList = [];
 
+        Communications.notifySyncProgress(100);
+        _syncInProgress = false;
         Communications.notifySyncComplete(null);
+
+        _storage.cleanupOrphanedCachedAudio(tracksToSave);
     }
 
     function isSyncNeeded() as Boolean {
-        return _storage.isConfigured();
+        if (!_storage.isConfigured()) {
+            return false;
+        }
+        var pending = _storage.loadPendingSyncTracks();
+        return pending.size() > 0;
     }
 
     function onStopSync() as Void {
         _syncTracksQueue = [];
         _finalTrackList = [];
+        _syncInProgress = false;
         _storage.saveSyncProgressDict({
             "phase" => "cancelled"
         });

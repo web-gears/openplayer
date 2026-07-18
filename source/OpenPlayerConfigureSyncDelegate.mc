@@ -2,6 +2,7 @@ import Toybox.WatchUi;
 import Toybox.Lang;
 import Toybox.Communications;
 import Toybox.Graphics;
+import Toybox.Timer;
 import ScaleHelper;
 
 class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
@@ -432,6 +433,8 @@ class SyncActionMenuDelegate extends WatchUi.ActionMenuDelegate {
 }
 
 class OpenPlayerSyncStatusView extends WatchUi.View {
+    private var _pollTimer as Timer.Timer?;
+
     function initialize() {
         View.initialize();
     }
@@ -442,7 +445,32 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
         if (WatchUi.View has :setActionMenuIndicator) {
             setActionMenuIndicator({:enabled => true});
         }
+        if (_pollTimer == null) {
+            _pollTimer = new Timer.Timer();
+            (_pollTimer as Timer.Timer).start(method(:onPollTick), 2000, true);
+        }
         WatchUi.requestUpdate();
+    }
+
+    function onPollTick() as Void {
+        var storage = new StorageManager();
+        var progress = storage.loadSyncProgressDict();
+        var phase = progress != null ? progress["phase"] as String? : null;
+        if (phase != null && (phase.equals("complete") || phase.equals("cancelled"))) {
+            stopPollTimer();
+        }
+        WatchUi.requestUpdate();
+    }
+
+    private function stopPollTimer() as Void {
+        if (_pollTimer != null) {
+            (_pollTimer as Timer.Timer).stop();
+            _pollTimer = null;
+        }
+    }
+
+    function onHide() as Void {
+        stopPollTimer();
     }
 
     function onUpdate(dc as Dc) as Void {

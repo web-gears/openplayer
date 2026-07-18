@@ -1,6 +1,5 @@
 import Toybox.WatchUi;
 import Toybox.Lang;
-import Toybox.Communications;
 
 class OpenPlayerPlaybackMenuDelegate extends WatchUi.Menu2InputDelegate {
     function initialize() {
@@ -26,13 +25,6 @@ class OpenPlayerPlaybackMenuDelegate extends WatchUi.Menu2InputDelegate {
                 new AboutDelegate(),
                 WatchUi.SLIDE_IMMEDIATE
             );
-        } else if (label.equals("Sync Now")) {
-            var syncState = storage.loadSyncState();
-            if (syncState.selectedPlaylistIds.size() == 0) {
-                WatchUi.showToast("No playlists queued", null);
-                return;
-            }
-            Communications.startSync();
         } else if (label.equals("[Remove All] Sync")) {
             var syncState = storage.loadSyncState();
             syncState.selectedPlaylistIds = [];
