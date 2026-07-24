@@ -278,6 +278,9 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     }
 
     function isSyncNeeded() as Boolean {
+        if (_syncInProgress) {
+            return false;
+        }
         if (!_storage.isConfigured()) {
             return false;
         }
