@@ -184,10 +184,13 @@ class JellyfinClient {
         }
 
         var url = buildUrl(server, "/Playlists/" + playlistId + "/Items") +
-            "?IncludeItemTypes=Audio" +
-            "&Fields=Name" +
-            "&StartIndex=" + startIndex.toString() +
+            "?StartIndex=" + startIndex.toString() +
             "&Limit=" + PAGE_SIZE.toString();
+
+        var userId = _storage.getUserId();
+        if (userId != null) {
+            url = url + "&UserId=" + userId;
+        }
 
         Communications.makeWebRequest(
             url,
