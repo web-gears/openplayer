@@ -363,18 +363,33 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onAllForegroundTracksFetched() as Void {
-        _storage.savePendingSyncTracks(_pendingTracks);
-        var totalBytes = 0;
+        var alreadySyncedIds = {};
+        var localTracks = _storage.loadSyncedTracks();
+        for (var i = 0; i < localTracks.size(); i++) {
+            var lt = localTracks[i] as JellyfinTrack;
+            if (lt.id != null) {
+                alreadySyncedIds[lt.id.toString()] = true;
+            }
+        }
+
+        var newTrackCount = 0;
+        var newBytes = 0;
         for (var i = 0; i < _pendingTracks.size(); i++) {
             var t = _pendingTracks[i] as Dictionary;
-            var size = t["downloadSize"] as Number?;
-            if (size != null) { totalBytes += size; }
+            var id = t["id"] != null ? t["id"].toString() : "";
+            if (!alreadySyncedIds[id]) {
+                newTrackCount++;
+                var size = t["downloadSize"] as Number?;
+                if (size != null) { newBytes += size; }
+            }
         }
+
+        _storage.savePendingSyncTracks(_pendingTracks);
         _storage.saveSyncProgressDict({
             "phase" => "confirm",
             "playlistCount" => _syncState.selectedPlaylistIds.size(),
-            "estimatedTracks" => _pendingTracks.size(),
-            "freeBytes" => totalBytes
+            "estimatedTracks" => newTrackCount,
+            "freeBytes" => newBytes
         });
         _pendingTracks = [];
         WatchUi.requestUpdate();
