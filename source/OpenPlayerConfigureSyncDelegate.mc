@@ -642,6 +642,19 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
                 );
             }
 
+            var syncError = storage.getSyncError();
+            if (syncError != null && syncError.length() > 0) {
+                dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_BLACK);
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    dc.getHeight() / 2 + ScaleHelper.scale(dc, 15),
+                    Graphics.FONT_XTINY,
+                    syncError,
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+            }
+
             if (percent != null) {
                 var barX = ScaleHelper.scale(dc, 20);
                 var barW = dc.getWidth() - ScaleHelper.scale(dc, 40);

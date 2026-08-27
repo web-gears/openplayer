@@ -17,10 +17,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     private var _retryCount as Number = 0;
     private static const MAX_RETRY = 2;
     private static const MAX_TRACK_SIZE_BYTES = 52428800;
-    private static const LOW_MEMORY_DEVICES = [
-        "010-02700", "010-02701",  // FR265, FR265s
-        "010-02810", "010-02811",  // FR165, FR165m
-    ];
 
     function initialize() {
         SyncDelegate.initialize();
@@ -153,10 +149,10 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                 Communications.notifySyncProgress(progress);
             }
             
-            var bitrate = getDefaultBitrate();
+            var bitrate = 256000;
             var dur = getTrackValueNum(cachedDict, "durationSeconds");
             if (dur != null && dur > 1200) {
-                bitrate = getPodcastBitrate();
+                bitrate = 128000;
             }
             System.println("SYNC: downloading track " + (_currentTrackIndex + 1) + "/" + _syncTracksQueue.size() + " bitrate=" + bitrate);
             _retryCount = 0;
@@ -223,24 +219,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         return null;
     }
 
-    private function isLowMemoryDevice() as Boolean {
-        var partNumber = System.getDeviceSettings().partNumber;
-        if (partNumber == null) { return true; }
-        var pn = partNumber as String;
-        for (var i = 0; i < LOW_MEMORY_DEVICES.size(); i++) {
-            if (pn.equals(LOW_MEMORY_DEVICES[i])) { return true; }
-        }
-        return false;
-    }
-
-    private function getDefaultBitrate() as Number {
-        return isLowMemoryDevice() ? 128000 : 256000;
-    }
-
-    private function getPodcastBitrate() as Number {
-        return isLowMemoryDevice() ? 96000 : 128000;
-    }
-
     function onTrackDownloaded(responseCode as Number, data as Null or Dictionary or String or PersistedContent.Iterator) as Void {
         System.println("SYNC: onTrackDownloaded rc=" + responseCode + " track=" + _currentTrackIndex);
         if (responseCode != 200) {
@@ -249,12 +227,13 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                 System.println("SYNC: retry " + _retryCount + "/" + MAX_RETRY + " for track " + _currentTrackIndex);
                 var cachedDict = _syncTracksQueue[_currentTrackIndex];
                 if (cachedDict != null && cachedDict["serverId"] != null) {
-                    var bitrate = getDefaultBitrate();
+                    var bitrate = 256000;
                     _client.downloadAndSaveTrack(cachedDict["serverId"] as String, method(:onTrackDownloaded), bitrate);
                     return;
                 }
             }
             System.println("SYNC: track download failed after retries, removing from final list");
+            _storage.setSyncError("Download failed (rc=" + responseCode + ")");
             var failedTrack = _syncTracksQueue[_currentTrackIndex];
             if (failedTrack != null) {
                 var failedId = getTrackValue(failedTrack, "id");
