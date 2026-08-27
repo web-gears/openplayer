@@ -273,6 +273,9 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     private var _pendingTracks as Array = [];
     private var _currentFetchPlaylistIdx as Number = 0;
     private var _currentFetchPageStart as Number = 0;
+    private var _alreadySyncedIds as Dictionary = {};
+    private var _pendingNewTrackCount as Number = 0;
+    private var _pendingNewBytes as Number = 0;
 
     function updateStateFromView() as Void {
         _storage.saveSyncState(_syncState);
@@ -290,6 +293,19 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         _pendingTracks = [];
         _currentFetchPlaylistIdx = 0;
         _currentFetchPageStart = 0;
+        _pendingNewTrackCount = 0;
+        _pendingNewBytes = 0;
+
+        _alreadySyncedIds = {};
+        var localTracks = _storage.loadSyncedTracks();
+        for (var i = 0; i < localTracks.size(); i++) {
+            var lt = localTracks[i] as JellyfinTrack;
+            if (lt.id != null) {
+                _alreadySyncedIds[lt.id.toString()] = true;
+            }
+        }
+
+        _storage.initPendingSyncTracks();
 
         _storage.saveCancelRequested(false);
         _storage.saveSyncProgressDict({
@@ -313,6 +329,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         if (_storage.isCancelRequested()) {
             _storage.clearCancelRequested();
             _pendingTracks = [];
+            _storage.clearPendingSyncTracks();
             return;
         }
         var ids = _syncState.selectedPlaylistIds;
@@ -329,10 +346,11 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
 
     function onForegroundTracksFetched(rc as Number, tracks as Array, pageStart as Number) as Void {
         if (rc == 200 && tracks != null) {
+            var toPersist = [];
             for (var i = 0; i < tracks.size(); i++) {
                 var t = tracks[i] as JellyfinTrack;
                 if (t != null) {
-                    _pendingTracks.add({
+                    var dict = {
                         "id" => t.id,
                         "serverId" => t.serverId,
                         "name" => t.name,
@@ -341,9 +359,20 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                         "durationSeconds" => t.durationSeconds,
                         "downloadSize" => t.downloadSize,
                         "playlistId" => t.playlistId
-                    });
+                    };
+                    _pendingTracks.add(dict);
+                    toPersist.add(dict);
+                    var idStr = t.id != null ? t.id.toString() : "";
+                    if (!_alreadySyncedIds[idStr]) {
+                        _pendingNewTrackCount++;
+                        _pendingNewBytes += t.downloadSize;
+                    }
                 }
             }
+            _storage.appendPendingSyncTracks(toPersist);
+            toPersist = [];
+            _pendingTracks = [];
+
             if (tracks.size() >= 5) {
                 _currentFetchPageStart += 5;
                 fetchNextForegroundBatch();
@@ -363,33 +392,11 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onAllForegroundTracksFetched() as Void {
-        var alreadySyncedIds = {};
-        var localTracks = _storage.loadSyncedTracks();
-        for (var i = 0; i < localTracks.size(); i++) {
-            var lt = localTracks[i] as JellyfinTrack;
-            if (lt.id != null) {
-                alreadySyncedIds[lt.id.toString()] = true;
-            }
-        }
-
-        var newTrackCount = 0;
-        var newBytes = 0;
-        for (var i = 0; i < _pendingTracks.size(); i++) {
-            var t = _pendingTracks[i] as Dictionary;
-            var id = t["id"] != null ? t["id"].toString() : "";
-            if (!alreadySyncedIds[id]) {
-                newTrackCount++;
-                var size = t["downloadSize"] as Number?;
-                if (size != null) { newBytes += size; }
-            }
-        }
-
-        _storage.savePendingSyncTracks(_pendingTracks);
         _storage.saveSyncProgressDict({
             "phase" => "confirm",
             "playlistCount" => _syncState.selectedPlaylistIds.size(),
-            "estimatedTracks" => newTrackCount,
-            "freeBytes" => newBytes
+            "estimatedTracks" => _pendingNewTrackCount,
+            "freeBytes" => _pendingNewBytes
         });
         _pendingTracks = [];
         WatchUi.requestUpdate();

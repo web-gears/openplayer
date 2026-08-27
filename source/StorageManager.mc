@@ -806,6 +806,68 @@ class StorageManager {
         Storage.deleteValue("pending_sync_tracks_str");
     }
 
+    function initPendingSyncTracks() as Void {
+        Storage.setValue("pending_sync_tracks_str", "");
+    }
+
+    function appendPendingSyncTracks(tracks as Array) as Void {
+        var pageEncoded = "";
+        for (var i = 0; i < tracks.size(); i++) {
+            if (i > 0) { pageEncoded = pageEncoded + RECORD_DELIM; }
+            pageEncoded = pageEncoded + encodeTrack(tracks[i]);
+        }
+        if (pageEncoded.length() == 0) { return; }
+
+        var existing = Storage.getValue("pending_sync_tracks_str");
+        var combined = "";
+        if (existing != null && existing.length() > 0) {
+            combined = existing + RECORD_DELIM + pageEncoded;
+        } else {
+            combined = pageEncoded;
+        }
+        Storage.setValue("pending_sync_tracks_str", combined);
+    }
+
+    private function encodeTrack(t) as String {
+        var id = "";
+        var serverId = "";
+        var name = "";
+        var albumName = "";
+        var artistName = "";
+        var durationSeconds = 0;
+        var downloadSize = 0;
+        var playlistId = "";
+        if (t instanceof Dictionary) {
+            var dict = t as Dictionary;
+            id = dict["id"] as String?;
+            serverId = dict["serverId"] as String?;
+            name = dict["name"] as String?;
+            albumName = dict["albumName"] as String?;
+            artistName = dict["artistName"] as String?;
+            durationSeconds = dict["durationSeconds"] as Number?;
+            downloadSize = dict["downloadSize"] as Number?;
+            playlistId = dict["playlistId"] as String?;
+        } else if (t instanceof JellyfinTrack) {
+            var jt = t as JellyfinTrack;
+            id = jt.id != null ? jt.id.toString() : "";
+            serverId = jt.serverId;
+            name = jt.name;
+            albumName = jt.albumName;
+            artistName = jt.artistName;
+            durationSeconds = jt.durationSeconds;
+            downloadSize = jt.downloadSize;
+            playlistId = jt.playlistId;
+        }
+        return id.toString() +
+            TRACK_DELIM + (serverId != null ? serverId : "") +
+            TRACK_DELIM + (name != null ? name : "") +
+            TRACK_DELIM + (albumName != null ? albumName : "") +
+            TRACK_DELIM + (artistName != null ? artistName : "") +
+            TRACK_DELIM + durationSeconds.toString() +
+            TRACK_DELIM + downloadSize.toString() +
+            TRACK_DELIM + (playlistId != null ? playlistId : "");
+    }
+
     function clearPendingPlaylistResponse() as Void {
         Storage.deleteValue("pending_response_code");
         Storage.deleteValue("pending_playlist_ids");
