@@ -171,7 +171,8 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
             Media.PLAYBACK_CONTROL_PREVIOUS,
             Media.PLAYBACK_CONTROL_NEXT,
             Media.PLAYBACK_CONTROL_VOLUME,
-            Media.PLAYBACK_CONTROL_SOURCE,
+            Media.PLAYBACK_CONTROL_SHUFFLE,
+            Media.PLAYBACK_CONTROL_REPEAT,
         ];
         if (profile has :playbackCapabilities) {
             profile.playbackCapabilities = 1;
