@@ -173,6 +173,24 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         downloadNextTrack();
     }
 
+    private function commitTrackToSyncedList(track as Dictionary) as Void {
+        var trackId = track["id"] != null ? track["id"].toString() : "";
+        var synced = _storage.loadSyncedTracks();
+        var exists = false;
+        for (var i = 0; i < synced.size(); i++) {
+            var t = synced[i] as JellyfinTrack;
+            if (t != null && t.id != null && t.id.toString().equals(trackId)) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            synced.add(track);
+            _storage.saveSyncedTracks(synced);
+        }
+        System.println("SYNC: committed to synced list, total=" + synced.size());
+    }
+
     private function removeTrackFromFinalList(failedId as String?) as Void {
         var newFinalList = [];
         for (var i = 0; i < _finalTrackList.size(); i++) {
@@ -256,6 +274,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                     metadata.album = getTrackValue(cachedDict, "albumName");
                     contentObj.setMetadata(metadata);
                 }
+                commitTrackToSyncedList(cachedDict);
             }
         }
 

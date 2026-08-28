@@ -437,6 +437,17 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                 cancelForegroundFetch();
                 return;
             }
+            stopForegroundPoll();
+            _storage.clearPendingSyncTracks();
+            _pendingTracks = [];
+            _fetchCancelled = true;
+            _storage.setSyncError("Couldn't read track list (rc=" + rc + ")");
+            _storage.saveSyncProgressDict({
+                "phase" => "fetch_failed",
+                "fetchError" => "Couldn't read track list (rc=" + rc + ")"
+            });
+            WatchUi.requestUpdate();
+            return;
         }
         _currentFetchPlaylistIdx++;
         _currentFetchPageStart = 0;
@@ -638,6 +649,27 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             return;
         }
 
+        if (phase.equals("fetch_failed")) {
+            var err = progress["fetchError"] as String?;
+            dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_BLACK);
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() / 2 - ScaleHelper.scale(dc, 15),
+                Graphics.FONT_TINY,
+                err != null ? err : "Sync failed",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+            dc.drawText(
+                dc.getWidth() / 2,
+                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                Graphics.FONT_XTINY,
+                "ENTER: OK",
+                Graphics.TEXT_JUSTIFY_CENTER
+            );
+            return;
+        }
+
         if (phase.equals("cancelled")) {
             dc.drawText(
                 dc.getWidth() / 2,
@@ -815,7 +847,7 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
                 Communications.startSync();
                 return true;
             }
-            if (phase != null && (phase.equals("complete") || phase.equals("cancelled"))) {
+            if (phase != null && (phase.equals("complete") || phase.equals("cancelled") || phase.equals("fetch_failed"))) {
                 _storage.clearSyncProgress();
                 WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
                 return true;
@@ -828,7 +860,7 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
         var progress = _storage.loadSyncProgressDict();
         if (progress != null) {
             var phase = progress["phase"] as String?;
-            if (phase == null || phase.equals("confirm")) {
+            if (phase == null || phase.equals("confirm") || phase.equals("fetch_failed")) {
                 _storage.clearSyncProgress();
                 WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
                 return true;
