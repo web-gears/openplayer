@@ -2,6 +2,7 @@ import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.System;
 import Toybox.PersistedContent;
+import Toybox.Timer;
 
 const AUTH_METHOD_ONRESPONSE = 0;
 const PLAYLISTS_METHOD_ONRESPONSE = 1;
@@ -12,6 +13,11 @@ class JellyfinClient {
     private var _pendingMethod as Number = 0;
     private var _pendingPlaylistId as String = "";
     private var _pendingPlaylistIndex as Number = 0;
+    private var _playlistPages as Array? = null;
+    private var _playlistTotal as Number = -1;
+    private var _playlistStartIndex as Number = 0;
+    private var _playlistAwaitingResponse as Boolean = false;
+    private var _playlistPollTimer as Timer.Timer? = null;
     private var _callback as
     (Method
         (responseCode as Number, data as Dictionary?) as Void
@@ -109,6 +115,7 @@ class JellyfinClient {
         callback as
             (Method(responseCode as Number, data as Dictionary?) as Void)
     ) as Void {
+        System.println("GETPLAY: entered getPlaylists");
         _callback = callback;
         _pendingMethod = PLAYLISTS_METHOD_ONRESPONSE;
 
@@ -120,11 +127,59 @@ class JellyfinClient {
             return;
         }
 
+        _playlistPages = [];
+        _playlistTotal = -1;
+        _playlistStartIndex = 0;
+        _playlistAwaitingResponse = false;
+
+        if (_playlistPollTimer == null) {
+            _playlistPollTimer = new Timer.Timer();
+            _playlistPollTimer.start(method(:onPlaylistPoll), 100, true);
+        }
+        System.println("GETPLAY: timer started, invoking first poll");
+        onPlaylistPoll();
+    }
+
+    function onPlaylistPoll() as Void {
+        if (_pendingMethod != PLAYLISTS_METHOD_ONRESPONSE) {
+            System.println("GETPLAY: poll, pendingMethod mismatch, stop");
+            stopPlaylistPoll();
+            return;
+        }
+        if (_playlistAwaitingResponse) {
+            return;
+        }
+        if (_playlistPages == null) {
+            return;
+        }
+        _playlistAwaitingResponse = true;
+        System.println("GETPLAY: poll issuing page start=" + _playlistStartIndex);
+        fetchPlaylistPage();
+    }
+
+    private function stopPlaylistPoll() as Void {
+        if (_playlistPollTimer != null) {
+            _playlistPollTimer.stop();
+            _playlistPollTimer = null;
+        }
+    }
+
+    private function fetchPlaylistPage() as Void {
+        var server = _storage.getServer();
+        var token = _storage.getAuthToken();
+        if (server == null || token == null) {
+            _pendingMethod = -1;
+            _callback.invoke(401, null);
+            return;
+        }
+
         var url = buildUrl(server, "/Items");
         var params = {
             "IncludeItemTypes" => "Playlist",
             "Recursive" => "true",
             "Fields" => "ChildCount",
+            "StartIndex" => _playlistStartIndex.toString(),
+            "Limit" => PLAYLIST_PAGE_SIZE.toString(),
         };
 
         Communications.makeWebRequest(
@@ -148,16 +203,60 @@ class JellyfinClient {
         if (_pendingMethod != PLAYLISTS_METHOD_ONRESPONSE) {
             return;
         }
-        _pendingMethod = -1;
 
-        if (responseCode == 200 && data != null) {
-            _callback.invoke(200, data);
-        } else {
+        if (responseCode != 200 || data == null) {
+            System.println("GETPLAY: response rc=" + responseCode);
+            _pendingMethod = -1;
+            stopPlaylistPoll();
             _callback.invoke(responseCode, null);
+            return;
         }
+
+        var items = data["Items"] as Array?;
+        if (items == null) {
+            System.println("GETPLAY: response 200 but no Items");
+            _pendingMethod = -1;
+            stopPlaylistPoll();
+            _callback.invoke(200, data);
+            return;
+        }
+
+        var pages = _playlistPages;
+        for (var i = 0; i < items.size(); i++) {
+            pages.add(items[i]);
+        }
+        System.println("GETPLAY: page items=" + items.size() + " acc=" + pages.size() + " total=" + _playlistTotal);
+
+        if (_playlistTotal < 0) {
+            var total = data["TotalRecordCount"] as Number?;
+            _playlistTotal = total != null ? total : -1;
+        }
+
+        var more = false;
+        if (_playlistTotal >= 0) {
+            more = pages.size() < _playlistTotal;
+        } else {
+            more = items.size() >= PLAYLIST_PAGE_SIZE;
+        }
+
+        if (more) {
+            System.println("GETPLAY: more=true, awaiting=false, next tick fetches");
+            _playlistStartIndex = pages.size();
+            _playlistAwaitingResponse = false;
+            return;
+        }
+
+        System.println("GETPLAY: DONE, invoking callback with " + pages.size() + " items");
+        _pendingMethod = -1;
+        stopPlaylistPoll();
+        _callback.invoke(200, {
+            "Items" => pages,
+            "TotalRecordCount" => _playlistTotal,
+        });
     }
 
     private static const PAGE_SIZE = 5;
+    private static const PLAYLIST_PAGE_SIZE = 10;
 
     function getPlaylistTracks(
         playlistId as String,

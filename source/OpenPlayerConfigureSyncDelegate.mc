@@ -21,9 +21,11 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         _syncState = _storage.loadSyncState();
         _currentPlaylistIndex = _storage.getCurrentPlaylistIndex();
         _view = view;
+        view.setDelegate(self);
     }
 
     function onShow() as Void {
+        System.println("CONF: onShow");
         if (_storage.isConfigured()) {
             var token = _storage.getAuthToken();
             if (token != null && token.length() > 0) {
@@ -51,6 +53,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function loadPlaylists() as Void {
+        System.println("CONF: loadPlaylists");
         if (!_storage.isConfigured()) {
             _storage.setSyncError("Press LAP to configure");
             WatchUi.requestUpdate();
@@ -63,6 +66,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function fetchPlaylists() as Void {
+        System.println("CONF: fetchPlaylists, calling getPlaylists");
         _client.getPlaylists(method(:onPlaylistsLoaded));
     }
 
@@ -70,10 +74,12 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         responseCode as Number,
         data as Dictionary?
     ) as Void {
+        System.println("CONF: onPlaylistsLoaded rc=" + responseCode);
         _pendingResponseCode = responseCode;
         _pendingData = data;
         if (responseCode == 200 && data != null) {
             var items = data["Items"] as Array;
+            System.println("CONF: playlists items=" + (items != null ? items.size().toString() : "null"));
             if (items != null) {
                 var ids = "";
                 var names = "";
@@ -276,6 +282,9 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     private var _alreadySyncedIds as Dictionary = {};
     private var _pendingNewTrackCount as Number = 0;
     private var _pendingNewBytes as Number = 0;
+    private var _fetchCancelled as Boolean = false;
+    private var _fetchAwaitingResponse as Boolean = false;
+    private var _fetchPollTimer as Timer.Timer? = null;
 
     function updateStateFromView() as Void {
         _storage.saveSyncState(_syncState);
@@ -308,6 +317,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         _storage.initPendingSyncTracks();
 
         _storage.saveCancelRequested(false);
+        _fetchCancelled = false;
         _storage.saveSyncProgressDict({
             "phase" => "fetching_tracks",
             "percent" => 0,
@@ -322,18 +332,13 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             WatchUi.SLIDE_IMMEDIATE
         );
 
-        fetchNextForegroundBatch();
+        startForegroundPoll();
     }
 
     function fetchNextForegroundBatch() as Void {
-        if (_storage.isCancelRequested()) {
-            _storage.clearCancelRequested();
-            _pendingTracks = [];
-            _storage.clearPendingSyncTracks();
-            return;
-        }
         var ids = _syncState.selectedPlaylistIds;
         if (_currentFetchPlaylistIdx >= ids.size()) {
+            stopForegroundPoll();
             onAllForegroundTracksFetched();
             return;
         }
@@ -342,6 +347,48 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             _currentFetchPageStart,
             method(:onForegroundTracksFetched)
         );
+    }
+
+    function onForegroundPollTick() as Void {
+        if (_fetchCancelled) {
+            stopForegroundPoll();
+            return;
+        }
+        if (_fetchAwaitingResponse) {
+            return;
+        }
+        if (_storage.isCancelRequested()) {
+            _storage.clearCancelRequested();
+            cancelForegroundFetch();
+            return;
+        }
+        _fetchAwaitingResponse = true;
+        fetchNextForegroundBatch();
+    }
+
+    private function startForegroundPoll() as Void {
+        stopForegroundPoll();
+        _fetchAwaitingResponse = false;
+        _fetchCancelled = false;
+        if (_fetchPollTimer == null) {
+            _fetchPollTimer = new Timer.Timer();
+            _fetchPollTimer.start(method(:onForegroundPollTick), 100, true);
+        }
+        onForegroundPollTick();
+    }
+
+    private function stopForegroundPoll() as Void {
+        if (_fetchPollTimer != null) {
+            _fetchPollTimer.stop();
+            _fetchPollTimer = null;
+        }
+    }
+
+    function cancelForegroundFetch() as Void {
+        _fetchCancelled = true;
+        stopForegroundPoll();
+        _storage.clearPendingSyncTracks();
+        _pendingTracks = [];
     }
 
     function onForegroundTracksFetched(rc as Number, tracks as Array, pageStart as Number) as Void {
@@ -363,7 +410,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                     _pendingTracks.add(dict);
                     toPersist.add(dict);
                     var idStr = t.id != null ? t.id.toString() : "";
-                    if (!_alreadySyncedIds[idStr]) {
+                    if (_alreadySyncedIds[idStr] == null) {
                         _pendingNewTrackCount++;
                         _pendingNewBytes += t.downloadSize;
                     }
@@ -373,9 +420,21 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             toPersist = [];
             _pendingTracks = [];
 
+            if (_fetchCancelled || _storage.isCancelRequested()) {
+                _storage.clearCancelRequested();
+                cancelForegroundFetch();
+                return;
+            }
+
             if (tracks.size() >= 5) {
-                _currentFetchPageStart += 5;
-                fetchNextForegroundBatch();
+                _currentFetchPageStart += tracks.size();
+                _fetchAwaitingResponse = false;
+                return;
+            }
+        } else {
+            if (_fetchCancelled || _storage.isCancelRequested()) {
+                _storage.clearCancelRequested();
+                cancelForegroundFetch();
                 return;
             }
         }
@@ -388,10 +447,11 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             "totalPlaylists" => _syncState.selectedPlaylistIds.size()
         });
         WatchUi.requestUpdate();
-        fetchNextForegroundBatch();
+        _fetchAwaitingResponse = false;
     }
 
     function onAllForegroundTracksFetched() as Void {
+        _fetchCancelled = false;
         _storage.saveSyncProgressDict({
             "phase" => "confirm",
             "playlistCount" => _syncState.selectedPlaylistIds.size(),

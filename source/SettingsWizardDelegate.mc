@@ -93,6 +93,7 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
             return true;
         }
         if (step == STEP_DONE) {
+            System.println("WIZ: onSelect STEP_DONE nav to sync");
             _isActive = false;
             var syncView = new OpenPlayerConfigureSyncView();
             var syncDelegate = new OpenPlayerConfigureSyncDelegate(syncView);
@@ -101,7 +102,6 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
                 syncDelegate,
                 WatchUi.SLIDE_IMMEDIATE
             );
-            syncDelegate.onShow();
             return true;
         }
         return false;
@@ -396,6 +396,7 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onAuthResult(responseCode as Number, data as Dictionary?) as Void {
+        System.println("WIZ: onAuthResult rc=" + responseCode);
         _view.hideLoading();
 
         if (responseCode == 200) {
@@ -415,6 +416,7 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onPlaylistsForWizard(responseCode as Number, data as Dictionary?) as Void {
+        System.println("WIZ: onPlaylistsForWizard rc=" + responseCode);
         if (responseCode == 200 && data != null) {
             var items = data["Items"] as Array?;
             if (items != null) {

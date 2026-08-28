@@ -11,6 +11,7 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
     private var _currentPlaylistIndex as Number = 0;
     private var _errorMessage as String = "";
     private var _initialized as Boolean = false;
+    private var _delegate as OpenPlayerConfigureSyncDelegate? = null;
 
     function initialize() {
         View.initialize();
@@ -19,16 +20,24 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
         _initialized = false;
     }
 
+    function setDelegate(delegate as OpenPlayerConfigureSyncDelegate) as Void {
+        _delegate = delegate;
+    }
+
     function onLayout(dc as Dc) as Void {}
 
     function onShow() as Void {
         _initialized = false;
         var storage = new StorageManager();
+        System.println("VIEW: onShow pendingRc=" + storage.getPendingPlaylistResponseCode());
         if (storage.getPendingPlaylistResponseCode() != 200) {
             _isLoading = true;
         }
         if (WatchUi.View has :setActionMenuIndicator) {
             setActionMenuIndicator({:enabled => true});
+        }
+        if (_delegate != null) {
+            _delegate.onShow();
         }
         _loadPlaylists();
     }
