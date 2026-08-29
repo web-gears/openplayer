@@ -4,6 +4,8 @@ A music and podcast player for Garmin smartwatch, syncing with Jellyfin media se
 
 [Garmin Connect IQ Store link](https://apps.garmin.com/apps/261eb561-66a9-448f-8ef0-9d3a5b22652a)
 
+> **Updating the app?** After an update is installed, fully restart your watch before opening OpenPlayer. The first launch after an update can still run the cached previous version (older menus/options may be shown). A quick restart ensures you're on the new version.
+
 <img width="1440" height="720" alt="hero_garmin" src="https://github.com/user-attachments/assets/39d4c0a6-3b38-44c7-9c0b-b31be34e8b1c" />
 (Audio player interface vary by model)
 
