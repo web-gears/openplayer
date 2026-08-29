@@ -52,6 +52,18 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     function onHide() as Void {
     }
 
+    function onShowWithCached() as Void {
+        System.println("CONF: onShowWithCached");
+        if (!_storage.isConfigured()) {
+            var wizardView = new SettingsWizardView();
+            WatchUi.switchToView(
+                wizardView,
+                new SettingsWizardDelegate(wizardView),
+                WatchUi.SLIDE_IMMEDIATE
+            );
+        }
+    }
+
     function loadPlaylists() as Void {
         System.println("CONF: loadPlaylists");
         if (!_storage.isConfigured()) {
@@ -61,6 +73,8 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         }
 
         _storage.saveSyncLoading(true);
+        _playlistAuthRetried = false;
+        _playlistRetryCount = 0;
         WatchUi.requestUpdate();
         fetchPlaylists();
     }
@@ -70,11 +84,27 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         _client.getPlaylists(method(:onPlaylistsLoaded));
     }
 
+    private var _playlistAuthRetried as Boolean = false;
+    private var _playlistRetryCount as Number = 0;
+
     function onPlaylistsLoaded(
         responseCode as Number,
         data as Dictionary?
     ) as Void {
         System.println("CONF: onPlaylistsLoaded rc=" + responseCode);
+        var recoverable = (responseCode == 401 || responseCode == -400 || responseCode == 0);
+        if (recoverable && !_playlistAuthRetried && _storage.isConfigured()) {
+            _playlistAuthRetried = true;
+            System.println("CONF: playlists rc=" + responseCode + " re-auth");
+            _client.authenticateFromSettings(method(:onPlaylistReAuthResult));
+            return;
+        }
+        if (recoverable && _playlistRetryCount < 1) {
+            _playlistRetryCount++;
+            System.println("CONF: playlists rc=" + responseCode + " retry " + _playlistRetryCount);
+            fetchPlaylists();
+            return;
+        }
         _pendingResponseCode = responseCode;
         _pendingData = data;
         if (responseCode == 200 && data != null) {
@@ -107,6 +137,22 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         processPendingResponse();
         _storage.saveSyncLoading(false);
         WatchUi.requestUpdate();
+    }
+
+    function onPlaylistReAuthResult(responseCode as Number, data as Dictionary?) as Void {
+        _playlistRetryCount = 0;
+        _playlistAuthRetried = true;
+        System.println("CONF: playlist re-auth rc=" + responseCode);
+        if (responseCode == 200) {
+            fetchPlaylists();
+        } else {
+            _pendingResponseCode = responseCode;
+            _pendingData = null;
+            _storage.savePendingPlaylistResponseCode(responseCode);
+            processPendingResponse();
+            _storage.saveSyncLoading(false);
+            WatchUi.requestUpdate();
+        }
     }
 
     function onKey(evt) as Boolean {
@@ -285,6 +331,9 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     private var _fetchCancelled as Boolean = false;
     private var _fetchAwaitingResponse as Boolean = false;
     private var _fetchPollTimer as Timer.Timer? = null;
+    private var _authRetried as Boolean = false;
+    private var _fetchRetryCount as Number = 0;
+    private var _trackRetryCount as Number = 0;
 
     function updateStateFromView() as Void {
         _storage.saveSyncState(_syncState);
@@ -318,6 +367,8 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
 
         _storage.saveCancelRequested(false);
         _fetchCancelled = false;
+        _authRetried = false;
+        _trackRetryCount = 0;
         _storage.saveSyncProgressDict({
             "phase" => "fetching_tracks",
             "percent" => 0,
@@ -342,8 +393,10 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             onAllForegroundTracksFetched();
             return;
         }
+        var pid = ids[_currentFetchPlaylistIdx] as String;
+        System.println("CONF: fetchTracks playlist[" + _currentFetchPlaylistIdx + "]='" + pid + "' page=" + _currentFetchPageStart);
         _client.getPlaylistTracks(
-            ids[_currentFetchPlaylistIdx] as String,
+            pid,
             _currentFetchPageStart,
             method(:onForegroundTracksFetched)
         );
@@ -437,6 +490,25 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                 cancelForegroundFetch();
                 return;
             }
+            var recoverable = (rc == 401 || rc == -400 || rc == 0);
+            if (recoverable && !_authRetried) {
+                _authRetried = true;
+                System.println("CONF: track fetch rc=" + rc + " re-auth");
+                _client.authenticateFromSettings(method(:onTrackReAuthResult));
+                return;
+            }
+            if (recoverable && _trackRetryCount < 2) {
+                _trackRetryCount++;
+                System.println("CONF: track fetch rc=" + rc + " retry " + _trackRetryCount);
+                WatchUi.requestUpdate();
+                _fetchAwaitingResponse = false;
+                if (_fetchPollTimer != null) {
+                    onForegroundPollTick();
+                } else {
+                    startForegroundPoll();
+                }
+                return;
+            }
             stopForegroundPoll();
             _storage.clearPendingSyncTracks();
             _pendingTracks = [];
@@ -444,7 +516,8 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             _storage.setSyncError("Couldn't read track list (rc=" + rc + ")");
             _storage.saveSyncProgressDict({
                 "phase" => "fetch_failed",
-                "fetchError" => "Couldn't read track list (rc=" + rc + ")"
+                "fetchError" => "Couldn't read track list",
+                "fetchErrorRc" => rc
             });
             WatchUi.requestUpdate();
             return;
@@ -459,6 +532,31 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         });
         WatchUi.requestUpdate();
         _fetchAwaitingResponse = false;
+    }
+
+    function onTrackReAuthResult(responseCode as Number, data as Dictionary?) as Void {
+        if (responseCode == 200) {
+            System.println("CONF: re-auth OK, resuming track fetch");
+            _fetchAwaitingResponse = false;
+            if (_fetchPollTimer == null) {
+                startForegroundPoll();
+            } else {
+                onForegroundPollTick();
+            }
+        } else {
+            System.println("CONF: re-auth failed rc=" + responseCode);
+            stopForegroundPoll();
+            _storage.clearPendingSyncTracks();
+            _pendingTracks = [];
+            _fetchCancelled = true;
+            _storage.setSyncError("Auth failed (rc=" + responseCode + ")");
+            _storage.saveSyncProgressDict({
+                "phase" => "fetch_failed",
+                "fetchError" => "Auth failed",
+                "fetchErrorRc" => responseCode
+            });
+            WatchUi.requestUpdate();
+        }
     }
 
     function onAllForegroundTracksFetched() as Void {
@@ -651,14 +749,26 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
 
         if (phase.equals("fetch_failed")) {
             var err = progress["fetchError"] as String?;
+            var rcVal = progress["fetchErrorRc"] as Number?;
+            var msg = err != null ? err : "Sync failed";
             dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_BLACK);
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() / 2 - ScaleHelper.scale(dc, 15),
+                dc.getHeight() / 2 - ScaleHelper.scale(dc, 22),
                 Graphics.FONT_TINY,
-                err != null ? err : "Sync failed",
+                msg,
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            if (rcVal != null) {
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    dc.getHeight() / 2 - ScaleHelper.scale(dc, 4),
+                    Graphics.FONT_XTINY,
+                    "(" + rcVal + ")",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
             dc.drawText(
                 dc.getWidth() / 2,

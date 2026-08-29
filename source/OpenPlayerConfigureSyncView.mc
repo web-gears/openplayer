@@ -30,14 +30,19 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
         _initialized = false;
         var storage = new StorageManager();
         System.println("VIEW: onShow pendingRc=" + storage.getPendingPlaylistResponseCode());
-        if (storage.getPendingPlaylistResponseCode() != 200) {
+        var hasCached = storage.getPendingPlaylistResponseCode() == 200;
+        if (!hasCached) {
             _isLoading = true;
         }
         if (WatchUi.View has :setActionMenuIndicator) {
             setActionMenuIndicator({:enabled => true});
         }
         if (_delegate != null) {
-            _delegate.onShow();
+            if (hasCached) {
+                _delegate.onShowWithCached();
+            } else {
+                _delegate.onShow();
+            }
         }
         _loadPlaylists();
     }

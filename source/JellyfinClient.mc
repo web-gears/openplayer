@@ -177,7 +177,6 @@ class JellyfinClient {
         var params = {
             "IncludeItemTypes" => "Playlist",
             "Recursive" => "true",
-            "Fields" => "ChildCount",
             "StartIndex" => _playlistStartIndex.toString(),
             "Limit" => PLAYLIST_PAGE_SIZE.toString(),
         };
@@ -256,7 +255,7 @@ class JellyfinClient {
     }
 
     private static const PAGE_SIZE = 5;
-    private static const PLAYLIST_PAGE_SIZE = 10;
+    private static const PLAYLIST_PAGE_SIZE = 5;
 
     function getPlaylistTracks(
         playlistId as String,
@@ -328,7 +327,6 @@ class JellyfinClient {
                 var album = item["Album"] as String?;
                 var artists = item["Artists"] as Array?;
                 var runTimeTicks = item["RunTimeTicks"] as Number?;
-                var mediaSources = item["MediaSources"] as Array?;
 
                 if (id != null && name != null) {
                     var artistName = "Unknown Artist";
@@ -339,21 +337,6 @@ class JellyfinClient {
                     var albumName = album != null ? album : "Unknown Album";
                     var durationSeconds =
                         runTimeTicks != null ? runTimeTicks / 10000000 : 0;
-                    var downloadSize = 0;
-
-                    if (mediaSources != null && mediaSources.size() > 0) {
-                        var source = mediaSources[0] as Dictionary;
-                        var size = source["Size"] as Number?;
-                        if (size != null) {
-                            downloadSize = size;
-                        }
-                    }
-                    if (downloadSize == 0) {
-                        var itemSize = item["Size"] as Number?;
-                        if (itemSize != null) {
-                            downloadSize = itemSize;
-                        }
-                    }
 
                     tracks.add(
                         new JellyfinTrack(
@@ -363,7 +346,7 @@ class JellyfinClient {
                             albumName,
                             artistName,
                             durationSeconds,
-                            downloadSize,
+                            0,
                             _pendingPlaylistId
                         )
                     );
