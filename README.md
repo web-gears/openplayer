@@ -53,7 +53,7 @@ From the main playback screen:
 
 1. **ENTER** to connect and load synced tracks.
 2. Select a playlist, then select a track.
-3. Use Garmin's native music controls (or the watch's media widget) to play, pause, skip, and adjust volume. To switch back to on-watch (local) music or another provider, open the native Garmin Music app (not OpenPlayer) and use its **Music Source** / **Manage** menu (gear icon) → select your preferred source.
+3. Use Garmin's native music controls (or the watch's media widget) to play, pause, skip, adjust volume, and toggle **shuffle** / **repeat** (available from the native player's playback menu). To switch back to on-watch (local) music or another provider, open the native Garmin Music app (not OpenPlayer) and use its **Music Source** / **Manage** menu (gear icon) → select your preferred source.
 
 ### 5. Manage playlists and storage
 

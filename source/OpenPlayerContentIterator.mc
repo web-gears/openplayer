@@ -45,6 +45,7 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
             _currentIndex = 0;
         }
 
+        _shuffle = getApp().getShuffle();
         if (_shuffle) {
             generateShuffleOrder();
         }
@@ -137,17 +138,27 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
         return _currentIndex;
     }
 
+    private function syncShuffleState() as Void {
+        if (_shuffle == getApp().getShuffle()) { return; }
+        _shuffle = getApp().getShuffle();
+        if (_shuffle) {
+            generateShuffleOrder();
+        }
+    }
+
     function get() as Content? {
+        syncShuffleState();
         if (_currentIndex >= _tracks.size()) {
             return null;
         }
 
-        if (_currentIndex >= _contentRefs.size()) {
+        var actualIndex = getActualIndex();
+        if (actualIndex >= _contentRefs.size()) {
             _currentIndex++;
             return null;
         }
 
-        var contentRef = _contentRefs[_currentIndex] as Media.ContentRef?;
+        var contentRef = _contentRefs[actualIndex] as Media.ContentRef?;
         if (contentRef == null) {
             _currentIndex++;
             return null;
@@ -244,6 +255,10 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
     }
 
     function shuffling() as Boolean {
-        return _shuffle;
+        return getApp().getShuffle();
+    }
+
+    function repeatMode() as Media.RepeatMode? {
+        return getApp().getRepeatMode();
     }
 }

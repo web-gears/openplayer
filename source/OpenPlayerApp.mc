@@ -7,10 +7,35 @@ import Toybox.Communications;
 class OpenPlayerApp extends Application.AudioContentProviderApp {
     private var _storage as StorageManager;
     var currentPlaylist = null;
+    private var _shuffle as Boolean = false;
+    private var _repeatMode as Media.RepeatMode? = null;
 
     function initialize() {
         AudioContentProviderApp.initialize();
         _storage = new StorageManager();
+    }
+
+    function setShuffle(on as Boolean) as Void {
+        _shuffle = on;
+    }
+
+    function getShuffle() as Boolean {
+        return _shuffle;
+    }
+
+    function cycleRepeatMode() as Media.RepeatMode {
+        if (_repeatMode == null || _repeatMode == Media.REPEAT_MODE_ALL) {
+            _repeatMode = Media.REPEAT_MODE_OFF;
+        } else if (_repeatMode == Media.REPEAT_MODE_OFF) {
+            _repeatMode = Media.REPEAT_MODE_ONE;
+        } else {
+            _repeatMode = Media.REPEAT_MODE_ALL;
+        }
+        return _repeatMode;
+    }
+
+    function getRepeatMode() as Media.RepeatMode {
+        return _repeatMode != null ? _repeatMode : Media.REPEAT_MODE_OFF;
     }
 
     function onStart(state as Dictionary?) as Void {}
