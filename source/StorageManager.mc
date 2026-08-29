@@ -326,6 +326,15 @@ class StorageManager {
         return idx != null ? idx : 0;
     }
 
+    function savePlaybackMode(mode as String) as Void {
+        Storage.setValue("playback_mode", mode);
+    }
+
+    function getPlaybackMode() as String {
+        var mode = Storage.getValue("playback_mode") as String?;
+        return mode != null ? mode : "music";
+    }
+
     function setPendingRemovePlaylistId(id as String?) as Void {
         Storage.setValue("pending_remove_playlist_id", id);
     }

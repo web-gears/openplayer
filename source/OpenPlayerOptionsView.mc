@@ -136,6 +136,13 @@ class OpenPlayerOptionsView extends WatchUi.View {
                 new AboutDelegate(),
                 WatchUi.SLIDE_IMMEDIATE
             );
+        } else if (label.equals("Switch to podcast mode") || label.equals("Switch to music mode")) {
+            WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+            getApp().toggleMode();
+            WatchUi.showToast(
+                getApp().isPodcastMode() ? "Podcast mode" : "Music mode",
+                null
+            );
         } else if (label.equals("Clear All Downloads")) {
             var confirmView = new ConfirmActionView("Clear all downloads?");
             WatchUi.pushView(

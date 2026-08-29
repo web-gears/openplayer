@@ -153,6 +153,7 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
             menu.addItem(new WatchUi.ActionMenuItem({:label => "Sync playlists"}, "sync_playlists"));
         }
         menu.addItem(new WatchUi.ActionMenuItem({:label => "Settings"}, "settings"));
+        menu.addItem(new WatchUi.ActionMenuItem({:label => getApp().getModeToggleLabel()}, "mode_toggle"));
         if (_viewMode.equals("playlists")) {
             if (playlistId != null) {
                 menu.addItem(new WatchUi.ActionMenuItem({:label => "Remove Playlist"}, "remove_playlist"));
@@ -274,6 +275,7 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
             options.add("Sync playlists");
         }
         options.add("Settings");
+        options.add(getApp().getModeToggleLabel());
 
         if (_viewMode.equals("playlists")) {
             if (playlistId != null) {
@@ -324,6 +326,12 @@ class PlaybackActionMenuDelegate extends WatchUi.ActionMenuDelegate {
             Communications.startSync();
         } else if (id.equals("sync_playlists")) {
             _delegate.pushSyncView();
+        } else if (id.equals("mode_toggle")) {
+            getApp().toggleMode();
+            WatchUi.showToast(
+                getApp().isPodcastMode() ? "Podcast mode" : "Music mode",
+                null
+            );
         } else if (id.equals("settings")) {
             var wizardView = new SettingsWizardView();
             WatchUi.pushView(

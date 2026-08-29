@@ -9,10 +9,37 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
     var currentPlaylist = null;
     private var _shuffle as Boolean = false;
     private var _repeatMode as Media.RepeatMode? = null;
+    private var _mode as String = "music";
 
     function initialize() {
         AudioContentProviderApp.initialize();
         _storage = new StorageManager();
+        _mode = _storage.getPlaybackMode();
+    }
+
+    function getMode() as String {
+        return _mode;
+    }
+
+    function isMusicMode() as Boolean {
+        return _mode.equals("music");
+    }
+
+    function isPodcastMode() as Boolean {
+        return _mode.equals("podcast");
+    }
+
+    function toggleMode() as Void {
+        if (_mode.equals("music")) {
+            _mode = "podcast";
+        } else {
+            _mode = "music";
+        }
+        _storage.savePlaybackMode(_mode);
+    }
+
+    function getModeToggleLabel() as String {
+        return _mode.equals("music") ? "Switch to podcast mode" : "Switch to music mode";
     }
 
     function setShuffle(on as Boolean) as Void {

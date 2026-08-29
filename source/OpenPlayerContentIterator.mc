@@ -176,15 +176,25 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
 
     function getPlaybackProfile() as PlaybackProfile? {
         var profile = new Media.PlaybackProfile();
-        profile.playbackControls = [
-            Media.PLAYBACK_CONTROL_SKIP_FORWARD,
-            Media.PLAYBACK_CONTROL_SKIP_BACKWARD,
-            Media.PLAYBACK_CONTROL_PREVIOUS,
-            Media.PLAYBACK_CONTROL_NEXT,
-            Media.PLAYBACK_CONTROL_VOLUME,
-            Media.PLAYBACK_CONTROL_SHUFFLE,
-            Media.PLAYBACK_CONTROL_REPEAT,
-        ];
+        if (getApp().isPodcastMode()) {
+            profile.playbackControls = [
+                Media.PLAYBACK_CONTROL_SKIP_FORWARD,
+                Media.PLAYBACK_CONTROL_SKIP_BACKWARD,
+                Media.PLAYBACK_CONTROL_PREVIOUS,
+                Media.PLAYBACK_CONTROL_NEXT,
+                Media.PLAYBACK_CONTROL_VOLUME,
+            ];
+        } else {
+            profile.playbackControls = [
+                Media.PLAYBACK_CONTROL_NEXT,
+                Media.PLAYBACK_CONTROL_PREVIOUS,
+                Media.PLAYBACK_CONTROL_SKIP_BACKWARD,
+                Media.PLAYBACK_CONTROL_SKIP_FORWARD,
+                Media.PLAYBACK_CONTROL_VOLUME,
+                Media.PLAYBACK_CONTROL_SHUFFLE,
+                Media.PLAYBACK_CONTROL_REPEAT,
+            ];
+        }
         if (profile has :playbackCapabilities) {
             profile.playbackCapabilities = 1;
         }
