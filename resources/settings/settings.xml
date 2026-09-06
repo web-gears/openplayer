@@ -6,6 +6,6 @@
         <settingConfig type="alphaNumeric" />
     </setting>
     <setting propertyKey="@Properties.jellyfin_password" title="Password">
-        <settingConfig type="alphaNumeric" />
+        <settingConfig type="password" />
     </setting>
 </settings>
