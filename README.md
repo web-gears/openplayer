@@ -24,10 +24,10 @@ A music and podcast player for Garmin smartwatch, syncing with Jellyfin media se
 
 ## Requirements
 - Garmin Fenix 5+ (or compatible Connect IQ device starting API level 3.1 with music and WiFi support)
-- Jellyfin server accessible over **HTTPS** (e.g. `https://jellyfin.example.com`)
+- Jellyfin server accessible from the watch. Both `https://` and `http://` URLs are accepted.
 - Jellyfin user account credentials
 
-**Note:** Garmin watches require TLS for all network connections. Plain HTTP addresses will not work on real hardware. If your Jellyfin server runs locally, set up a reverse proxy with a valid SSL certificate or use a service like Tailscale/Cloudflare Tunnel to expose it over HTTPS.
+**Note about HTTP vs HTTPS:** Garmin watches cannot be forced to allow plain HTTP when the request is relayed through the phone (Garmin Connect Mobile): on Android, cleartext connections to LAN/private addresses are blocked (only `127.0.0.1` is exempt), while iOS typically allows HTTP to raw IP addresses. Plain HTTP to a LAN server generally works when the watch connects directly over WiFi. You can enter `http://` in the server URL; HTTPS remains the reliable option on real hardware.
 
 ## Getting Started
 
@@ -39,9 +39,9 @@ Install OpenPlayer from the [Garmin Connect IQ Store](https://apps.garmin.com/ap
 
 Open OpenPlayer on your watch. On first launch you'll see a connect prompt. Press **ENTER** to proceed to the setup screen.
 
-**Garmin Connect Mobile (recommended):** Enter your server URL (must start with `https://`), username, and password in the Garmin Connect Mobile app under **Device > Apps > OpenPlayer > Settings**. On the watch, press ENTER to connect once the fields are filled.
+**Garmin Connect Mobile (recommended):** Enter your server URL (e.g. `https://jellyfin.example.com` or `http://192.168.1.50:8096`), username, and password in the Garmin Connect Mobile app under **Device > Apps > OpenPlayer > Settings**. On the watch, press ENTER to connect once the fields are filled.
 
-**QR code:** From the setup screen, press **UP** to switch to the QR code flow. A QR code is displayed on the watch. Scan it with your phone to open a secure form where you enter your Jellyfin server URL (must use HTTPS), username, and password. The credentials are transmitted to the watch and saved.
+**QR code:** From the setup screen, press **UP** to switch to the QR code flow. A QR code is displayed on the watch. Scan it with your phone to open a secure form where you enter your Jellyfin server URL (scheme is preserved, e.g. `http://192.168.1.50:8096`), username, and password. The credentials are transmitted to the watch and saved.
 
 After entering credentials, the watch displays a review screen showing your server URL and username. Press ENTER to save.
 

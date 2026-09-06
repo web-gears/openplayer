@@ -5,7 +5,7 @@ import ScaleHelper;
 
 class AboutView extends WatchUi.View {
     private var _title as String = "OpenPlayer";
-    private var _version as String = "2.0.20";
+    private var _version as String = "2.0.21";
     private static var _qrCodeBitmap as Graphics.BitmapReference?;
 
 

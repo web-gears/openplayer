@@ -68,22 +68,25 @@ class StorageManager {
             return;
         }
         var cleanUrl = url;
+        var prefix = "";
         if (
             cleanUrl.length() > 7 &&
             cleanUrl.substring(0, 7).equals("http://")
         ) {
+            prefix = "http://";
             cleanUrl = cleanUrl.substring(7, cleanUrl.length());
         } else if (
             cleanUrl.length() > 8 &&
             cleanUrl.substring(0, 8).equals("https://")
         ) {
+            prefix = "https://";
             cleanUrl = cleanUrl.substring(8, cleanUrl.length());
         }
         var slashPos = indexOf2(cleanUrl, "/");
         if (slashPos >= 0) {
             cleanUrl = cleanUrl.substring(0, slashPos);
         }
-        Storage.setValue("jellyfin_server", cleanUrl);
+        Storage.setValue("jellyfin_server", prefix + cleanUrl);
     }
 
     function getServer() as String {
