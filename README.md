@@ -55,14 +55,14 @@ From the main playback screen:
 
 1. **ENTER** to connect and load synced tracks.
 2. Select a playlist, then select a track.
-3. Use Garmin's native music controls (or the watch's media widget) to play, pause, skip, adjust volume, and toggle **shuffle** / **repeat** (available from the native player's playback menu; shuffle/repeat only appear in Music mode). To switch back to on-watch (local) music or another provider, open the native Garmin Music app (not OpenPlayer) and use its **Music Source** / **Manage** menu (gear icon) → select your preferred source.
+3. Use Garmin's native music controls (or the watch's media widget) to play, pause, skip tracks, adjust volume, and toggle **shuffle** / **repeat** (available from the native player's playback menu; shuffle/repeat only appear in Music mode). To switch back to on-watch (local) music or another provider, open the native Garmin Music app (not OpenPlayer) and use its **Music Source** / **Manage** menu (gear icon) → select your preferred source.
 
 ### 4.5 Music vs Podcast mode
 
 The app runs in **Music mode** by default. Use **Menu → Switch to podcast mode** (in the main Options menu or the touch action menu) to toggle. The item is labeled **"Switch to music mode"** while in podcast mode.
 
-- **Music mode** — native playback controls: next, previous, skip back, skip forward, volume, shuffle, repeat.
-- **Podcast mode** — native playback controls: skip forward, skip back, previous, next, volume (shuffle/repeat hidden).
+- **Music mode** — native playback controls: next, previous, volume, shuffle, repeat. (No 30-second skip buttons, so headphone next/previous commands advance/rewind tracks like standard music players.)
+- **Podcast mode** — native playback controls: skip forward, skip back, previous, next, volume (shuffle/repeat hidden). Podcast mode enables the 30-second skip buttons; headphone next/previous commands perform 30-second skips here.
 
 The mode applies when playback next starts.
 

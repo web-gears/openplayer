@@ -188,8 +188,6 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
             profile.playbackControls = [
                 Media.PLAYBACK_CONTROL_NEXT,
                 Media.PLAYBACK_CONTROL_PREVIOUS,
-                Media.PLAYBACK_CONTROL_SKIP_BACKWARD,
-                Media.PLAYBACK_CONTROL_SKIP_FORWARD,
                 Media.PLAYBACK_CONTROL_VOLUME,
                 Media.PLAYBACK_CONTROL_SHUFFLE,
                 Media.PLAYBACK_CONTROL_REPEAT,
