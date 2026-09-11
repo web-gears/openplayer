@@ -74,13 +74,21 @@ class JellyfinClient {
             {
                 :method => Communications.HTTP_REQUEST_METHOD_POST,
                 :headers => {
-                    "X-Emby-Authorization" => "MediaBrowser Client=\"OpenPlayer\", Device=\"Fenix 6S Pro\", DeviceId=\"openplayer-001\", Version=\"1.0.0\"",
+                    "Authorization" => buildClientHeader(),
                     "Content-Type" => Communications.REQUEST_CONTENT_TYPE_JSON,
                 },
                 :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON,
             },
             method(:onAuthResponse)
         );
+    }
+
+    private static function buildClientHeader() as String {
+        return "MediaBrowser Client=\"OpenPlayer\", Device=\"Fenix 6S Pro\", DeviceId=\"openplayer-001\", Version=\"1.0.0\"";
+    }
+
+    private static function buildTokenHeader(token as String) as String {
+        return "MediaBrowser Token=\"" + token + "\", " + buildClientHeader();
     }
 
     function authenticateFromSettings(
@@ -199,7 +207,7 @@ class JellyfinClient {
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
                 :headers => {
-                    "X-Emby-Token" => token,
+                    "Authorization" => buildTokenHeader(token),
                 },
                 :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON,
             },
@@ -308,7 +316,7 @@ class JellyfinClient {
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
                 :headers => {
-                    "X-Emby-Token" => token,
+                    "Authorization" => buildTokenHeader(token),
                 },
                 :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_JSON,
             },
@@ -401,7 +409,7 @@ class JellyfinClient {
         var options = {
             :method => Communications.HTTP_REQUEST_METHOD_GET,
             :headers => {
-                "X-Emby-Token" => token,
+                "Authorization" => buildTokenHeader(token),
             },
             :responseType => Communications.HTTP_RESPONSE_CONTENT_TYPE_AUDIO,
             :mediaEncoding => Media.ENCODING_MP3,
