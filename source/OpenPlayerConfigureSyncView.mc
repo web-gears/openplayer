@@ -12,6 +12,7 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
     private var _errorMessage as String = "";
     private var _initialized as Boolean = false;
     private var _delegate as OpenPlayerConfigureSyncDelegate? = null;
+    private var _errorCode as Number = -1;
 
     function initialize() {
         View.initialize();
@@ -85,14 +86,12 @@ if (rc == 200) {
                 _playlists = newPlaylists;
                 _currentPlaylistIndex = 0;
                 _errorMessage = "";
+                _errorCode = -1;
                 _initialized = true;
             }
-        } else if (rc == 401) {
-            _errorMessage = "Invalid API key";
-        } else if (rc == 0) {
-            _errorMessage = "Network error";
         } else if (rc != -1) {
-            _errorMessage = "Failed to load playlists (" + rc + ")";
+            _errorMessage = networkErrorText(rc);
+            _errorCode = rc;
         }
     }
 
@@ -147,11 +146,21 @@ if (rc == 200) {
                     : "No playlists found",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
+            if (_errorCode != -1) {
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+                dc.drawText(
+                    dc.getWidth() / 2,
+                    dc.getHeight() / 2 - ScaleHelper.scale(dc, 4),
+                    Graphics.FONT_XTINY,
+                    "(" + _errorCode + ")",
+                    Graphics.TEXT_JUSTIFY_CENTER
+                );
+            }
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
             var hint = _errorMessage.length() > 0 ? "Retry | ESC: Back" : "Retry";
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() / 2 + ScaleHelper.scale(dc, 10),
+                dc.getHeight() / 2 + ScaleHelper.scale(dc, 14),
                 Graphics.FONT_XTINY,
                 hint,
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -269,6 +278,7 @@ if (rc == 200) {
 
     function setError(msg as String) as Void {
         _errorMessage = msg;
+        _errorCode = -1;
     }
 
     function clearAllSelections() as Void {

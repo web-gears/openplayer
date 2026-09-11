@@ -13,6 +13,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     private var _currentPlaylistIndex as Number = 0;
     private var _pendingResponseCode as Number = -1;
     private var _pendingData as Dictionary?;
+    private var _playlistTimeoutTimer as Timer.Timer? = null;
 
     function initialize(view as OpenPlayerConfigureSyncView) {
         BehaviorDelegate.initialize();
@@ -50,10 +51,12 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onHide() as Void {
+        stopPlaylistTimeout();
     }
 
     function onShowWithCached() as Void {
         System.println("CONF: onShowWithCached");
+        _storage.saveSyncLoading(false);
         if (!_storage.isConfigured()) {
             var wizardView = new SettingsWizardView();
             WatchUi.switchToView(
@@ -77,6 +80,30 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         _playlistRetryCount = 0;
         WatchUi.requestUpdate();
         fetchPlaylists();
+        startPlaylistTimeout();
+    }
+
+    private function startPlaylistTimeout() as Void {
+        stopPlaylistTimeout();
+        _playlistTimeoutTimer = new Timer.Timer();
+        (_playlistTimeoutTimer as Timer.Timer).start(method(:onPlaylistTimeout), 20000, false);
+    }
+
+    private function stopPlaylistTimeout() as Void {
+        if (_playlistTimeoutTimer != null) {
+            (_playlistTimeoutTimer as Timer.Timer).stop();
+            _playlistTimeoutTimer = null;
+        }
+    }
+
+    function onPlaylistTimeout() as Void {
+        _playlistTimeoutTimer = null;
+        if (_storage.isSyncLoading()) {
+            System.println("CONF: playlist fetch TIMEOUT");
+            _storage.savePendingPlaylistResponseCode(0);
+            _storage.saveSyncLoading(false);
+            WatchUi.requestUpdate();
+        }
     }
 
     function fetchPlaylists() as Void {
@@ -91,6 +118,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         responseCode as Number,
         data as Dictionary?
     ) as Void {
+        stopPlaylistTimeout();
         System.println("CONF: onPlaylistsLoaded rc=" + responseCode);
         var recoverable = (responseCode == 401 || responseCode == -400 || responseCode == 0);
         if (recoverable && !_playlistAuthRetried && _storage.isConfigured()) {
@@ -140,6 +168,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onPlaylistReAuthResult(responseCode as Number, data as Dictionary?) as Void {
+        stopPlaylistTimeout();
         _playlistRetryCount = 0;
         _playlistAuthRetried = true;
         System.println("CONF: playlist re-auth rc=" + responseCode);
@@ -513,7 +542,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             _storage.clearPendingSyncTracks();
             _pendingTracks = [];
             _fetchCancelled = true;
-            _storage.setSyncError("Couldn't read track list (rc=" + rc + ")");
+            _storage.setSyncError(networkErrorText(rc));
             _storage.saveSyncProgressDict({
                 "phase" => "fetch_failed",
                 "fetchError" => "Couldn't read track list",
@@ -549,7 +578,7 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             _storage.clearPendingSyncTracks();
             _pendingTracks = [];
             _fetchCancelled = true;
-            _storage.setSyncError("Auth failed (rc=" + responseCode + ")");
+            _storage.setSyncError(networkErrorText(responseCode));
             _storage.saveSyncProgressDict({
                 "phase" => "fetch_failed",
                 "fetchError" => "Auth failed",

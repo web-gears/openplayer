@@ -8,6 +8,18 @@ const AUTH_METHOD_ONRESPONSE = 0;
 const PLAYLISTS_METHOD_ONRESPONSE = 1;
 const TRACKS_METHOD_ONRESPONSE = 2;
 
+function networkErrorText(rc as Number) as String {
+    if (rc == 401) { return "Auth failed"; }
+    else if (rc == 403) { return "Access denied"; }
+    else if (rc == 0) { return "Timed out"; }
+    else if (rc == -101) { return "No network"; }
+    else if (rc == -104) { return "Request timed out"; }
+    else if (rc == -300) { return "Server error"; }
+    else if (rc == -400) { return "Invalid server response"; }
+    else if (rc == -402) { return "Response too large"; }
+    else { return "Network error"; }
+}
+
 class JellyfinClient {
     private var _storage as StorageManager;
     private var _pendingMethod as Number = 0;
