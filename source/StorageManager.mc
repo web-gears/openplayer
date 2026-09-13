@@ -687,6 +687,41 @@ class StorageManager {
         saveSyncedTracks(newTracks);
     }
 
+    function reconcileSyncedTracks(pendingTracks as Array, selectedPlaylistIds as Array) as Void {
+        var syncedTracks = loadSyncedTracks();
+        var selected = {};
+        for (var i = 0; i < selectedPlaylistIds.size(); i++) {
+            selected[selectedPlaylistIds[i] as String] = true;
+        }
+
+        var pendingKeys = {};
+        for (var i = 0; i < pendingTracks.size(); i++) {
+            var pt = pendingTracks[i] as Dictionary;
+            if (pt == null) { continue; }
+            var pid = pt["playlistId"] as String?;
+            var tid = pt["id"] != null ? pt["id"].toString() : "";
+            if (pid != null && tid.length() > 0) {
+                pendingKeys[pid + "|" + tid] = true;
+            }
+        }
+
+        var keep = [];
+        for (var i = 0; i < syncedTracks.size(); i++) {
+            var t = syncedTracks[i] as JellyfinTrack;
+            var keepTrack = true;
+            if (t.playlistId != null && selected[t.playlistId] != null) {
+                keepTrack = pendingKeys[t.playlistId + "|" + t.id.toString()] != null;
+            }
+            if (keepTrack) {
+                keep.add(t);
+            } else {
+                Storage.deleteValue("tr_" + t.id.toString());
+            }
+        }
+
+        saveSyncedTracks(keep);
+    }
+
     private function obfuscate(str as String) as String {
         var result = "";
         for (var i = 0; i < str.length(); i++) {

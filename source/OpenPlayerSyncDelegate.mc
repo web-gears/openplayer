@@ -11,7 +11,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     private var _currentTrackIndex as Number = 0;
     
     private var _syncTracksQueue as Array<Dictionary> = [];
-    private var _finalTrackList as Array = [];
     private var _lastSentProgress as Number = -1;
     private var _syncInProgress as Boolean = false;
     private var _retryCount as Number = 0;
@@ -24,7 +23,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _client = new JellyfinClient(_storage);
         _lastSentProgress = -1;
         _syncTracksQueue = [];
-        _finalTrackList = [];
         _currentTrackIndex = 0;
         _syncInProgress = false;
         _retryCount = 0;
@@ -61,7 +59,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
 
         _syncTracksQueue = [];
-        _finalTrackList = [];
         var localTracks = _storage.loadSyncedTracks();
         var localIds = {};
         for (var i = 0; i < localTracks.size(); i++) {
@@ -74,14 +71,11 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         for (var i = 0; i < pendingTracks.size(); i++) {
             var track = pendingTracks[i] as Dictionary;
             var trackId = track["id"] != null ? track["id"].toString() : "";
-            if (localIds[trackId]) {
-                _finalTrackList.add(track);
-            } else {
+            if (localIds[trackId] == null) {
                 _syncTracksQueue.add(track);
-                _finalTrackList.add(track);
             }
         }
-        System.println("SYNC: toDownload=" + _syncTracksQueue.size() + " finalList=" + _finalTrackList.size());
+        System.println("SYNC: toDownload=" + _syncTracksQueue.size());
 
         _currentTrackIndex = 0;
         _storage.saveSyncProgressDict({
@@ -164,11 +158,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     }
 
     private function skipCurrentTrack() as Void {
-        var failedTrack = _syncTracksQueue[_currentTrackIndex];
-        if (failedTrack != null) {
-            var failedId = getTrackValue(failedTrack, "id");
-            removeTrackFromFinalList(failedId);
-        }
         _currentTrackIndex++;
         downloadNextTrack();
     }
@@ -189,20 +178,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
             _storage.saveSyncedTracks(synced);
         }
         System.println("SYNC: committed to synced list, total=" + synced.size());
-    }
-
-    private function removeTrackFromFinalList(failedId as String?) as Void {
-        var newFinalList = [];
-        for (var i = 0; i < _finalTrackList.size(); i++) {
-            var t = _finalTrackList[i] as Dictionary;
-            if (t != null) {
-                var tid = t["id"] != null ? t["id"].toString() : "";
-                if (failedId == null || !tid.equals(failedId)) {
-                    newFinalList.add(t);
-                }
-            }
-        }
-        _finalTrackList = newFinalList;
     }
 
     private function getTrackValue(track, key as String) as String? {
@@ -250,13 +225,8 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                     return;
                 }
             }
-            System.println("SYNC: track download failed after retries, removing from final list");
+            System.println("SYNC: track download failed after retries, skipping");
             _storage.setSyncError("Download failed (rc=" + responseCode + ")");
-            var failedTrack = _syncTracksQueue[_currentTrackIndex];
-            if (failedTrack != null) {
-                var failedId = getTrackValue(failedTrack, "id");
-                removeTrackFromFinalList(failedId);
-            }
         } else if (responseCode == 200 && data != null) {
             System.println("SYNC: track downloaded successfully");
             _retryCount = 0;
@@ -290,19 +260,19 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
 
     function finalizeSync() as Void {
         var totalTracks = _syncTracksQueue.size();
-        var tracksToSave = _finalTrackList.size() > 0 ? _finalTrackList : _syncTracksQueue;
+        var syncState = _storage.loadSyncState();
+        var pendingTracks = _storage.loadPendingSyncTracks();
+        _storage.reconcileSyncedTracks(pendingTracks, syncState.selectedPlaylistIds);
+        pendingTracks = [];
+        var syncedTracks = _storage.loadSyncedTracks();
         var totalBytes = 0;
-        for (var i = 0; i < tracksToSave.size(); i++) {
-            var t = tracksToSave[i] as Dictionary;
-            if (t != null) {
-                var size = t["downloadSize"];
-                if (size instanceof Number) {
-                    totalBytes += size;
-                }
+        for (var i = 0; i < syncedTracks.size(); i++) {
+            var t = syncedTracks[i] as JellyfinTrack;
+            if (t != null && t.downloadSize != null) {
+                totalBytes += t.downloadSize;
             }
         }
 
-        _storage.saveSyncedTracks(tracksToSave);
         _storage.clearPendingSyncTracks();
 
         var prevProgress = _storage.loadSyncProgressDict();
@@ -318,19 +288,17 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
         _storage.saveSyncProgressDict(progress);
 
-        var syncState = _storage.loadSyncState();
         syncState.lastSyncTimestamp = System.getTimer();
         syncState.totalSizeBytes = totalBytes;
         _storage.saveSyncState(syncState);
 
         _syncTracksQueue = [];
-        _finalTrackList = [];
 
         Communications.notifySyncProgress(100);
         _syncInProgress = false;
         Communications.notifySyncComplete(null);
 
-        _storage.cleanupOrphanedCachedAudio(tracksToSave);
+        _storage.cleanupOrphanedCachedAudio(syncedTracks);
     }
 
     function isSyncNeeded() as Boolean {
@@ -346,7 +314,6 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
 
     function onStopSync() as Void {
         _syncTracksQueue = [];
-        _finalTrackList = [];
         _syncInProgress = false;
         _storage.saveSyncProgressDict({
             "phase" => "cancelled"

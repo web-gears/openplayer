@@ -49,6 +49,16 @@ After entering credentials, the watch displays a review screen showing your serv
 
 After setup you'll see a list of playlists from your Jellyfin server. Use UP/DOWN to scroll and ENTER to toggle a playlist for syncing. Press ENTER on the sync prompt to download the selected playlists to your watch. Tracks are stored locally for offline playback.
 
+Syncing works in two modes:
+- **Selected playlists** are fully synced to **mirror the server**: new tracks are downloaded and tracks that were removed from the playlist on the server are deleted from the watch.
+- **Deselected playlists** (playlists you downloaded before but aren't selecting now) are **never touched** — their tracks stay on the watch exactly as they are, even after you run another sync.
+
+In other words, keep a playlist **selected** only if you want it to stay in sync with your Jellyfin server. Deselecting a playlist does **not** delete anything from your watch — it just stops that playlist from being updated. Previously downloaded playlists remain playable offline until you remove them explicitly:
+
+- **Remove this Playlist** — from the music screen (playback list), open the menu and choose **Remove this Playlist**; confirm the prompt. This deselects the playlist and deletes its tracks from the watch.
+- **Remove Track** — from the music screen menu, choose **Remove Track** to delete the currently selected song.
+- **Clear All Downloads** — from the **Menu → Options** screen, choose **Clear All Downloads** to wipe every synced playlist and track from watch storage.
+
 ### 4. Play music
 
 From the main playback screen:
@@ -73,7 +83,9 @@ Press **Menu** (or the action menu on touch devices) from the playback or sync s
 - **Settings** — Re-run the setup wizard to change server or credentials.
 - **Switch to podcast mode / Switch to music mode** — Toggle between Music and Podcast playback modes.
 - **Sync playlists** — Select playlists, review number of tracks, and start syncing.
-- **Clear All Downloads** — Remove all synced tracks from watch storage.
+- **Remove this Playlist** — Deselect the highlighted playlist and delete its tracks from the watch (confirmation required).
+- **Remove Track** — Delete the currently selected track (confirmation required).
+- **Clear All Downloads** — Remove all synced tracks from watch storage (confirmation required).
 - **About** — App version and developer info.
 
 ### Button navigation
