@@ -74,46 +74,58 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
             }
         }
 
+        // Pass 1 (definitive): match by the ContentRef id stored during sync
+        // (tr_<trackId> = ref.getId()). The same audio may back several
+        // playlist rows of the same song, which is correct.
+        for (var i = 0; i < _tracks.size(); i++) {
+            var track = _tracks[i] as JellyfinTrack;
+            if (track == null || track.id == null) { continue; }
+            var storedRefId = Storage.getValue("tr_" + track.id.toString()) as String?;
+            if (storedRefId == null || storedRefId.length() == 0) { continue; }
+            for (var j = 0; j < allRefs.size(); j++) {
+                var cRef = allRefs[j] as Media.ContentRef;
+                var refId = cRef.getId();
+                if (refId != null && refId.toString().equals(storedRefId)) {
+                    _contentRefs[i] = cRef;
+                    break;
+                }
+            }
+        }
+
+        // Pass 2 (fallback): title matching for tracks without a stored ref id
+        // (e.g. synced before the tr_ mapping existed). If a title maps to more
+        // refs than rows (same song in multiple playlists), the refs are shared
+        // so no row is left null. If distinct audio files share a title, each
+        // row claims its own ref, in order.
+        var titleToRefs = {};
         for (var i = 0; i < allRefs.size(); i++) {
             var meta = allMetas[i] as Media.ContentMetadata?;
             if (meta == null || meta.title == null) { continue; }
-            for (var j = 0; j < _tracks.size(); j++) {
-                if (_contentRefs[j] != null) { continue; }
-                var track = _tracks[j] as JellyfinTrack;
-                if (track != null && meta.title.equals(track.name)) {
-                    _contentRefs[j] = allRefs[i] as Media.ContentRef;
-                    break;
-                }
+            var title = meta.title;
+            if (titleToRefs[title] == null) {
+                titleToRefs[title] = [];
             }
+            (titleToRefs[title] as Array).add(allRefs[i]);
         }
+        var titleClaimCount = {};
+        for (var j = 0; j < _tracks.size(); j++) {
+            if (_contentRefs[j] != null) { continue; }
+            var track = _tracks[j] as JellyfinTrack;
+            if (track == null || track.name == null) { continue; }
+            var refsList = titleToRefs[track.name] as Array?;
+            if (refsList == null) { continue; }
+            var claimCount = titleClaimCount[track.name] as Number?;
+            if (claimCount == null) { claimCount = 0; }
+            var refIndex = claimCount;
+            if (refIndex >= refsList.size()) {
+                refIndex = refsList.size() - 1;
+            }
+            _contentRefs[j] = refsList[refIndex] as Media.ContentRef;
+            titleClaimCount[track.name] = claimCount + 1;
+        }
+        titleToRefs = {};
+        titleClaimCount = {};
         allMetas = [];
-
-        for (var i = 0; i < _tracks.size(); i++) {
-            if (_contentRefs[i] != null) { continue; }
-            var track = _tracks[i] as JellyfinTrack;
-            var storedRefId = Storage.getValue("tr_" + track.id.toString()) as String?;
-            if (storedRefId == null) { continue; }
-            for (var j = 0; j < allRefs.size(); j++) {
-                if (allRefs[j].getId().equals(storedRefId)) {
-                    _contentRefs[i] = allRefs[j] as Media.ContentRef;
-                    break;
-                }
-            }
-        }
-
-        for (var i = 0; i < _tracks.size(); i++) {
-            if (_contentRefs[i] != null) { continue; }
-            var track = _tracks[i] as JellyfinTrack;
-            for (var j = 0; j < allTracks.size(); j++) {
-                var fullTrack = allTracks[j] as JellyfinTrack;
-                if (fullTrack.name != null && fullTrack.name.equals(track.name)) {
-                    if (j < allRefs.size()) {
-                        _contentRefs[i] = allRefs[j] as Media.ContentRef;
-                    }
-                    break;
-                }
-            }
-        }
 
     }
 

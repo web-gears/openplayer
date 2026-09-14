@@ -233,8 +233,12 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
             var cachedDict = _syncTracksQueue[_currentTrackIndex];
             if (cachedDict != null) {
                 var trackId = cachedDict["id"] != null ? cachedDict["id"].toString() : null;
-                if (trackId != null) {
-                    Application.Storage.setValue("tr_" + trackId, data.toString());
+                if (trackId != null && data instanceof Media.ContentRef) {
+                    var cRef = data as Media.ContentRef;
+                    var refId = cRef.getId();
+                    if (refId != null) {
+                        Application.Storage.setValue("tr_" + trackId, refId.toString());
+                    }
                 }
                 var contentObj = Media.getCachedContentObj(data as Media.ContentRef);
                 if (contentObj instanceof Media.Content) {
