@@ -98,7 +98,7 @@ Press **Menu** (or the action menu on touch devices) from the playback or sync s
 | Back | ESC / LAP |
 | Menu / Options | START (long-press on supported models) |
 
-Touch-enabled watches (Venu X1, Venu 4, Vivoactive 5/6) support tap to select and swipe to scroll.
+Touch-enabled watches (Venu X1, Venu 4, Vivoactive 5/6) support tap to select and swipe to scroll: swipe **down** for the next page / item below, swipe **up** for the previous page / item above (matches the on-screen "UP/DOWN" hints).
 
 ## Privacy
 

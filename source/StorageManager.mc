@@ -409,16 +409,29 @@ class StorageManager {
     }
 
     function cleanupOrphanedCachedAudio(keepTracks as Array) as Void {
+        var keepRefIds = {};
         var keepNames = {};
         for (var i = 0; i < keepTracks.size(); i++) {
             var t = keepTracks[i];
+            var id = null;
             var name = "";
             if (t instanceof Dictionary) {
-                name = (t as Dictionary)["name"] as String;
+                var dict = t as Dictionary;
+                var idv = dict["id"];
+                if (idv != null) { id = idv.toString(); }
+                name = dict["name"] as String?;
             } else if (t instanceof JellyfinTrack) {
-                name = (t as JellyfinTrack).name;
+                var jt = t as JellyfinTrack;
+                if (jt.id != null) { id = jt.id.toString(); }
+                name = jt.name;
             }
-            if (name != null && !name.equals("")) {
+            if (id != null && id.length() > 0) {
+                var storedRefId = Storage.getValue("tr_" + id) as String?;
+                if (storedRefId != null && storedRefId.length() > 0) {
+                    keepRefIds[storedRefId] = true;
+                }
+            }
+            if (name != null && name.length() > 0) {
                 keepNames[name] = true;
             }
         }
@@ -435,13 +448,19 @@ class StorageManager {
 
         for (var i = 0; i < refs.size(); i++) {
             var contentRef = refs[i] as Media.ContentRef;
+            var refId = contentRef.getId();
+            var refIdStr = refId != null ? refId.toString() : null;
+            if (refIdStr != null && keepRefIds[refIdStr] != null) {
+                continue;
+            }
             var content = Media.getCachedContentObj(contentRef) as Media.Content?;
             if (content != null) {
                 var meta = content.getMetadata();
-                if (meta.title == null || keepNames[meta.title] == null) {
-                    Media.deleteCachedItem(contentRef);
+                if (meta.title != null && keepNames[meta.title] != null) {
+                    continue;
                 }
             }
+            Media.deleteCachedItem(contentRef);
         }
     }
 

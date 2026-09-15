@@ -57,6 +57,12 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 
+    function onSwipe(evt as WatchUi.SwipeEvent) as Lang.Boolean {
+        if (evt.getDirection() == WatchUi.SWIPE_UP) { return onPreviousPage(); }
+        if (evt.getDirection() == WatchUi.SWIPE_DOWN) { return onNextPage(); }
+        return false;
+    }
+
     function onSelect() as Lang.Boolean {
         var step = _view.getStep();
         if (step == STEP_CHOICE) {

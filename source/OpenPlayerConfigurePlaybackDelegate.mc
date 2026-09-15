@@ -24,6 +24,12 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 
+    function onSwipe(evt as WatchUi.SwipeEvent) as Boolean {
+        if (evt.getDirection() == WatchUi.SWIPE_UP) { return onPreviousPage(); }
+        if (evt.getDirection() == WatchUi.SWIPE_DOWN) { return onNextPage(); }
+        return false;
+    }
+
     function onBack() as Boolean {
         if (_viewMode.equals("tracks")) {
             _viewMode = "playlists";

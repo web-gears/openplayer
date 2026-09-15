@@ -232,6 +232,12 @@ class OpenPlayerOptionsDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 
+    function onSwipe(evt as WatchUi.SwipeEvent) as Boolean {
+        if (evt.getDirection() == WatchUi.SWIPE_UP) { return onPreviousPage(); }
+        if (evt.getDirection() == WatchUi.SWIPE_DOWN) { return onNextPage(); }
+        return false;
+    }
+
     function onSelect() as Boolean {
         if (_view != null) {
             _view.onSelect_withIndex(_selectedIndex);

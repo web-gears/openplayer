@@ -14,6 +14,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     private var _lastSentProgress as Number = -1;
     private var _syncInProgress as Boolean = false;
     private var _retryCount as Number = 0;
+    private var _failedTrackIds as Dictionary = {};
     private static const MAX_RETRY = 2;
     private static const MAX_TRACK_SIZE_BYTES = 52428800;
 
@@ -26,6 +27,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         _currentTrackIndex = 0;
         _syncInProgress = false;
         _retryCount = 0;
+        _failedTrackIds = {};
     }
 
     function onStartSync() as Void {
@@ -35,6 +37,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
         _syncInProgress = true;
         System.println("SYNC: onStartSync");
+        _failedTrackIds = {};
         var token = _storage.getAuthToken();
         if (token == null || token.length() == 0) {
             System.println("SYNC: no token, re-auth");
@@ -226,6 +229,13 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                 }
             }
             System.println("SYNC: track download failed after retries, skipping");
+            var failedDict = _syncTracksQueue[_currentTrackIndex];
+            if (failedDict != null) {
+                var fid = failedDict["id"] != null ? failedDict["id"].toString() : "";
+                if (fid.length() > 0) {
+                    _failedTrackIds[fid] = true;
+                }
+            }
             _storage.setSyncError("Download failed (rc=" + responseCode + ")");
         } else if (responseCode == 200 && data != null) {
             System.println("SYNC: track downloaded successfully");
@@ -266,6 +276,18 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         var totalTracks = _syncTracksQueue.size();
         var syncState = _storage.loadSyncState();
         var pendingTracks = _storage.loadPendingSyncTracks();
+        var hasFailed = _failedTrackIds.keys().size() > 0;
+        if (hasFailed) {
+            var filtered = [];
+            for (var i = 0; i < pendingTracks.size(); i++) {
+                var pt = pendingTracks[i] as Dictionary;
+                if (pt == null) { continue; }
+                var pid = pt["id"] != null ? pt["id"].toString() : "";
+                if (pid.length() > 0 && _failedTrackIds[pid] != null) { continue; }
+                filtered.add(pt);
+            }
+            pendingTracks = filtered;
+        }
         _storage.reconcileSyncedTracks(pendingTracks, syncState.selectedPlaylistIds);
         pendingTracks = [];
         var syncedTracks = _storage.loadSyncedTracks();
@@ -319,9 +341,13 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
     function onStopSync() as Void {
         _syncTracksQueue = [];
         _syncInProgress = false;
-        _storage.saveSyncProgressDict({
-            "phase" => "cancelled"
-        });
+        var progress = _storage.loadSyncProgressDict();
+        var phase = progress != null ? progress["phase"] as String? : null;
+        if (phase == null || !phase.equals("complete")) {
+            _storage.saveSyncProgressDict({
+                "phase" => "cancelled"
+            });
+        }
         _storage.clearCancelRequested();
         Communications.cancelAllRequests();
         Communications.notifySyncComplete(null);

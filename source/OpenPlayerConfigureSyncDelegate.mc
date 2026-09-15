@@ -208,6 +208,12 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 
+    function onSwipe(evt as WatchUi.SwipeEvent) as Boolean {
+        if (evt.getDirection() == WatchUi.SWIPE_UP) { return onPreviousPage(); }
+        if (evt.getDirection() == WatchUi.SWIPE_DOWN) { return onNextPage(); }
+        return false;
+    }
+
     function onSelect() as Boolean {
         startSync();
         return true;
@@ -716,7 +722,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
         if (phase.equals("confirm")) {
             dc.drawText(
                 dc.getWidth() / 2,
-                ScaleHelper.scale(dc, 12),
+                ScaleHelper.topSafe(dc, 12, 34),
                 Graphics.FONT_TINY,
                 "Ready to Sync",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -725,14 +731,14 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             var pc = progress["playlistCount"] as Number?;
             var et = progress["estimatedTracks"] as Number?;
 
-            var y = ScaleHelper.scale(dc, 40);
+            var y = ScaleHelper.topSafe(dc, 40, 62);
             if (pc != null) {
                 dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_TINY, pc + " playlist(s) selected", Graphics.TEXT_JUSTIFY_CENTER);
-                y += ScaleHelper.scale(dc, 22);
+                y += ScaleHelper.scale(dc, 32);
             }
             if (et != null) {
                 dc.drawText(dc.getWidth() / 2, y, Graphics.FONT_TINY, "Est. " + et + " new tracks", Graphics.TEXT_JUSTIFY_CENTER);
-                y += ScaleHelper.scale(dc, 22);
+                y += ScaleHelper.scale(dc, 32);
             }
 
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
@@ -749,7 +755,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
         if (phase.equals("fetching_tracks")) {
             dc.drawText(
                 dc.getWidth() / 2,
-                ScaleHelper.scale(dc, 12),
+                ScaleHelper.topSafe(dc, 12, 34),
                 Graphics.FONT_TINY,
                 "Fetching track data...",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -759,7 +765,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             if (cp != null && tp != null && tp > 0) {
                 dc.drawText(
                     dc.getWidth() / 2,
-                    ScaleHelper.scale(dc, 45),
+                    ScaleHelper.topSafe(dc, 45, 58),
                     Graphics.FONT_TINY,
                     "Playlist " + cp + "/" + tp,
                     Graphics.TEXT_JUSTIFY_CENTER
@@ -829,7 +835,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
 
         dc.drawText(
             dc.getWidth() / 2,
-            ScaleHelper.scale(dc, 15),
+            ScaleHelper.topSafe(dc, 15, 34),
             Graphics.FONT_MEDIUM,
             "Sync",
             Graphics.TEXT_JUSTIFY_CENTER

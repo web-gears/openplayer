@@ -64,6 +64,12 @@ class ConfirmActionDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 
+    function onSwipe(evt) {
+        if (evt.getDirection() == WatchUi.SWIPE_UP) { return onPreviousPage(); }
+        if (evt.getDirection() == WatchUi.SWIPE_DOWN) { return onNextPage(); }
+        return false;
+    }
+
     function onSelect() {
         if (_view.getSelected() == 0 && _onConfirm != null) {
             _onConfirm.invoke();
