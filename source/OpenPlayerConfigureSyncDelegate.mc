@@ -986,6 +986,21 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
         if (progress != null) {
             var phase = progress["phase"] as String?;
             if (phase != null && phase.equals("confirm")) {
+                var et = progress["estimatedTracks"] as Number?;
+                if (et != null && et == 0) {
+                    var syncState = _storage.loadSyncState();
+                    var pending = _storage.loadPendingSyncTracks();
+                    _storage.reconcileSyncedTracks(pending, syncState.selectedPlaylistIds);
+                    _storage.clearPendingSyncTracks();
+                    _storage.cleanupOrphanedCachedAudio(_storage.loadSyncedTracks());
+                    _storage.saveSyncProgressDict({
+                        "phase" => "complete",
+                        "current" => 0,
+                        "total" => 0,
+                        "percent" => 100
+                    });
+                    return true;
+                }
                 _storage.saveSyncProgressDict({
                     "phase" => "starting"
                 });

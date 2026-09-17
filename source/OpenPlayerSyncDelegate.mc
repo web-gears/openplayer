@@ -320,11 +320,13 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
 
         _syncTracksQueue = [];
 
+        if (totalTracks > 0) {
+            _storage.cleanupOrphanedCachedAudio(syncedTracks);
+        }
+
         Communications.notifySyncProgress(100);
         _syncInProgress = false;
         Communications.notifySyncComplete(null);
-
-        _storage.cleanupOrphanedCachedAudio(syncedTracks);
     }
 
     function isSyncNeeded() as Boolean {

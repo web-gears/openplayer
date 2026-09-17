@@ -49,6 +49,8 @@ After entering credentials, the watch displays a review screen showing your serv
 
 After setup you'll see a list of playlists from your Jellyfin server. Use UP/DOWN to scroll and ENTER to toggle a playlist for syncing. Press ENTER on the sync prompt to download the selected playlists to your watch. Tracks are stored locally for offline playback.
 
+If the sync preview shows **0 new tracks** (everything is already up to date), pressing ENTER finishes the sync locally without connecting over Wi-Fi or starting a background download.
+
 Syncing works in two modes:
 - **Selected playlists** are fully synced to **mirror the server**: new tracks are downloaded and tracks that were removed from the playlist on the server are deleted from the watch.
 - **Deselected playlists** (playlists you downloaded before but aren't selecting now) are **never touched** — their tracks stay on the watch exactly as they are, even after you run another sync.
