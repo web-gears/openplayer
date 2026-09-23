@@ -992,7 +992,6 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
                     var pending = _storage.loadPendingSyncTracks();
                     _storage.reconcileSyncedTracks(pending, syncState.selectedPlaylistIds);
                     _storage.clearPendingSyncTracks();
-                    _storage.cleanupOrphanedCachedAudio(_storage.loadSyncedTracks());
                     _storage.saveSyncProgressDict({
                         "phase" => "complete",
                         "current" => 0,

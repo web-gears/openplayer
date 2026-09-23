@@ -52,8 +52,10 @@ After setup you'll see a list of playlists from your Jellyfin server. Use UP/DOW
 If the sync preview shows **0 new tracks** (everything is already up to date), pressing ENTER finishes the sync locally without connecting over Wi-Fi or starting a background download.
 
 Syncing works in two modes:
-- **Selected playlists** are fully synced to **mirror the server**: new tracks are downloaded and tracks that were removed from the playlist on the server are deleted from the watch.
+- **Selected playlists** are fully synced to **mirror the server**: new tracks are downloaded and tracks that were removed from the playlist on the server are dropped from your synced track list.
 - **Deselected playlists** (playlists you downloaded before but aren't selecting now) are **never touched** — their tracks stay on the watch exactly as they are, even after you run another sync.
+
+The synced track list is updated during sync, but cached audio files are only physically removed from the watch by the explicit options below. If you need to regain storage space, use **Remove this Playlist** or **Clear All Downloads**.
 
 In other words, keep a playlist **selected** only if you want it to stay in sync with your Jellyfin server. Deselecting a playlist does **not** delete anything from your watch — it just stops that playlist from being updated. Previously downloaded playlists remain playable offline until you remove them explicitly:
 
