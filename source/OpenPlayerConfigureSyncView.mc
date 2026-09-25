@@ -88,6 +88,15 @@ if (rc == 200) {
                 _errorMessage = "";
                 _errorCode = -1;
                 _initialized = true;
+                var storage2 = new StorageManager();
+                _currentPlaylistIndex = storage2.getCurrentPlaylistIndex();
+                if (_currentPlaylistIndex >= _playlists.size() && _playlists.size() > 0) {
+                    _currentPlaylistIndex = _playlists.size() - 1;
+                    storage2.saveCurrentPlaylistIndex(_currentPlaylistIndex);
+                }
+                if (_currentPlaylistIndex < 0) {
+                    _currentPlaylistIndex = 0;
+                }
             }
         } else if (rc != -1) {
             _errorMessage = networkErrorText(rc);
@@ -105,6 +114,13 @@ if (rc == 200) {
         _loadPlaylists();
 
         _currentPlaylistIndex = storage.getCurrentPlaylistIndex();
+        if (_playlists.size() > 0 && _currentPlaylistIndex >= _playlists.size()) {
+            _currentPlaylistIndex = _playlists.size() - 1;
+            storage.saveCurrentPlaylistIndex(_currentPlaylistIndex);
+        }
+        if (_currentPlaylistIndex < 0) {
+            _currentPlaylistIndex = 0;
+        }
         var syncState = storage.loadSyncState();
         _selectedIndices = [];
         for (var i = 0; i < syncState.selectedPlaylistIds.size(); i++) {

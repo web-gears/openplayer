@@ -14,7 +14,7 @@ function networkErrorText(rc as Number) as String {
     else if (rc == 0) { return "Timed out"; }
     else if (rc == -101) { return "No network"; }
     else if (rc == -104) { return "Request timed out"; }
-    else if (rc == -300) { return "Server error"; }
+    else if (rc == -300) { return "Network timeout"; }
     else if (rc == -400) { return "Invalid server response"; }
     else if (rc == -402) { return "Response too large"; }
     else { return "Network error"; }

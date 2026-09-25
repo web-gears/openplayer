@@ -2,6 +2,7 @@ import Toybox.WatchUi;
 import Toybox.Lang;
 import Toybox.Communications;
 import Toybox.Graphics;
+import Toybox.System;
 import Toybox.Timer;
 import ScaleHelper;
 
@@ -421,11 +422,44 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         startForegroundPoll();
     }
 
+    function isWifiAvailable() as Boolean {
+        var settings = System.getDeviceSettings();
+        var info = settings.connectionInfo;
+        if (info == null) {
+            return true;
+        }
+        var wifi = info[:wifi];
+        if (wifi == null) {
+            return true;
+        }
+        return wifi.state == System.CONNECTION_STATE_CONNECTED;
+    }
+
+    function hasPhoneChannel() as Boolean {
+        var settings = System.getDeviceSettings();
+        return settings.connectionAvailable;
+    }
+
     function fetchNextForegroundBatch() as Void {
         var ids = _syncState.selectedPlaylistIds;
         if (_currentFetchPlaylistIdx >= ids.size()) {
             stopForegroundPoll();
             onAllForegroundTracksFetched();
+            return;
+        }
+        if (!isWifiAvailable() && !hasPhoneChannel()) {
+            System.println("CONF: no wifi nor phone channel, aborting fetch");
+            stopForegroundPoll();
+            _storage.clearPendingSyncTracks();
+            _pendingTracks = [];
+            _fetchCancelled = true;
+            _storage.setSyncError("WiFi isn't connected");
+            _storage.saveSyncProgressDict({
+                "phase" => "fetch_failed",
+                "fetchError" => "WiFi isn't connected. Open Settings -> WiFi",
+                "fetchErrorRc" => -300
+            });
+            WatchUi.requestUpdate();
             return;
         }
         var pid = ids[_currentFetchPlaylistIdx] as String;
@@ -549,9 +583,13 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
             _pendingTracks = [];
             _fetchCancelled = true;
             _storage.setSyncError(networkErrorText(rc));
+            var fetchMsg = "Couldn't read track list";
+            if (rc == -300) {
+                fetchMsg = "Network timeout - check WiFi";
+            }
             _storage.saveSyncProgressDict({
                 "phase" => "fetch_failed",
-                "fetchError" => "Couldn't read track list",
+                "fetchError" => fetchMsg,
                 "fetchErrorRc" => rc
             });
             WatchUi.requestUpdate();

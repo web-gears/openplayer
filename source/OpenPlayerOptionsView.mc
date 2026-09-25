@@ -28,8 +28,8 @@ class OpenPlayerOptionsView extends WatchUi.View {
         _options = options;
         var storage = new StorageManager();
         _selectedIndex = storage.getOptionsSelection();
-        if (_selectedIndex >= options.size()) {
-            _selectedIndex = 0;
+        if (_selectedIndex >= options.size() && options.size() > 0) {
+            _selectedIndex = options.size() - 1;
         }
         WatchUi.requestUpdate();
     }
@@ -218,8 +218,8 @@ class OpenPlayerOptionsDelegate extends WatchUi.BehaviorDelegate {
         _options = options;
         var storage = new StorageManager();
         _selectedIndex = storage.getOptionsSelection();
-        if (_selectedIndex >= options.size()) {
-            _selectedIndex = 0;
+        if (_selectedIndex >= options.size() && options.size() > 0) {
+            _selectedIndex = options.size() - 1;
         }
     }
 

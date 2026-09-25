@@ -51,6 +51,8 @@ After setup you'll see a list of playlists from your Jellyfin server. Use UP/DOW
 
 If the sync preview shows **0 new tracks** (everything is already up to date), pressing ENTER finishes the sync locally without connecting over Wi-Fi or starting a background download.
 
+**Network requirement for syncing:** fetching and downloading tracks requires a network connection on the watch — either its own Wi-Fi or a paired phone. If the watch has **no Wi-Fi and no phone connection** at all, syncing stops immediately with the message **"WiFi isn't connected. Open Settings -> WiFi"** instead of hanging on a timed-out request. When your Jellyfin server is reachable only over your home network (e.g. `http://192.168.1.50:8096`), wake the watch's Wi-Fi first (e.g. prompt it via **Settings → Wi-Fi** or a built-in weather/music sync) and start syncing right away — Garmin watches put Wi-Fi to sleep to save battery and CIQ apps cannot wake it themselves.
+
 Syncing works in two modes:
 - **Selected playlists** are fully synced to **mirror the server**: new tracks are downloaded and tracks that were removed from the playlist on the server are dropped from your synced track list.
 - **Deselected playlists** (playlists you downloaded before but aren't selecting now) are **never touched** — their tracks stay on the watch exactly as they are, even after you run another sync.
@@ -87,8 +89,8 @@ Press **Menu** (or the action menu on touch devices) from the playback or sync s
 - **Settings** — Re-run the setup wizard to change server or credentials.
 - **Switch to podcast mode / Switch to music mode** — Toggle between Music and Podcast playback modes.
 - **Sync playlists** — Select playlists, review number of tracks, and start syncing.
-- **Remove this Playlist** — Deselect the highlighted playlist and delete its tracks from the watch (confirmation required).
-- **Remove Track** — Delete the currently selected track (confirmation required).
+- **Remove this Playlist** — Deselect the highlighted playlist and delete its tracks from the watch (confirmation required). After removal the list re-highlights the nearest remaining item (the one that takes the removed playlist's place, or the last item if the removed one was at the end), so the highlighted item always matches the stored selection.
+- **Remove Track** — Delete the currently selected track (confirmation required). The track list re-highlights the nearest remaining track.
 - **Clear All Downloads** — Remove all synced tracks from watch storage (confirmation required).
 - **About** — App version and developer info.
 

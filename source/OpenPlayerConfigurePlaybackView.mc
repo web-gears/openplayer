@@ -26,11 +26,21 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             _scrollOffset = storage.getPlaybackTrackSelection();
         } else {
             _selectedIndex = storage.getPlaybackPlaylistSelection();
-            _scrollOffset = storage.getPlaybackPlaylistSelection();
+            clampAndSavePlaylistIndex(storage);
+            _scrollOffset = _selectedIndex;
         }
         if (WatchUi.View has :setActionMenuIndicator) {
             setActionMenuIndicator({:enabled => true});
         }
+    }
+
+    private function clampAndSavePlaylistIndex(storage as StorageManager) as Void {
+        if (_playlists.size() == 0) {
+            _selectedIndex = 0;
+        } else if (_selectedIndex >= _playlists.size()) {
+            _selectedIndex = _playlists.size() - 1;
+        }
+        storage.savePlaybackPlaylistSelection(_selectedIndex);
     }
 
     function loadData() as Void {
@@ -86,6 +96,11 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             }
         }
         _playlists = unique;
+
+        if (_playlists.size() > 0 && _selectedIndex >= _playlists.size()) {
+            _selectedIndex = _playlists.size() - 1;
+            storage.savePlaybackPlaylistSelection(_selectedIndex);
+        }
     }
 
     function onUpdate(dc as Dc) as Void {
@@ -176,6 +191,16 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             return;
         }
 
+        var storage = new StorageManager();
+        if (_trackSelectedIndex >= filteredTracks.size()) {
+            _trackSelectedIndex = filteredTracks.size() - 1;
+            _scrollOffset = _trackSelectedIndex;
+            storage.savePlaybackTrackSelection(_trackSelectedIndex);
+        } else if (_trackSelectedIndex < 0) {
+            _trackSelectedIndex = 0;
+            storage.savePlaybackTrackSelection(0);
+        }
+
         var scrollOffset = _scrollOffset;
 
         // Keep selected track visible
@@ -236,7 +261,8 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             _scrollOffset = storage.getPlaybackTrackSelection();
         } else {
             _selectedIndex = storage.getPlaybackPlaylistSelection();
-            _scrollOffset = storage.getPlaybackPlaylistSelection();
+            clampAndSavePlaylistIndex(storage);
+            _scrollOffset = _selectedIndex;
         }
         WatchUi.requestUpdate();
     }
