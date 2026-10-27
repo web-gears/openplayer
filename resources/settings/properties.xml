@@ -2,4 +2,5 @@
     <property id="jellyfin_server" type="string" />
     <property id="jellyfin_username" type="string" />
     <property id="jellyfin_password" type="string" />
+    <property id="audio_bitrate" type="number">0</property>
 </properties>

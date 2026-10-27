@@ -53,7 +53,9 @@ class SyncState {
     }
 
     function addPlaylist(id as String) as Void {
-        selectedPlaylistIds.add(id);
+        if (!isPlaylistSelected(id)) {
+            selectedPlaylistIds.add(id);
+        }
     }
 
     function removePlaylist(id as String) as Void {

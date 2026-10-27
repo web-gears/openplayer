@@ -4,9 +4,9 @@ import Toybox.WatchUi;
 import Toybox.Media;
 import Toybox.Communications;
 
+(:background)
 class OpenPlayerApp extends Application.AudioContentProviderApp {
     private var _storage as StorageManager;
-    var currentPlaylist = null;
     private var _shuffle as Boolean = false;
     private var _repeatMode as Media.RepeatMode? = null;
     private var _mode as String = "music";
@@ -15,6 +15,11 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
         AudioContentProviderApp.initialize();
         _storage = new StorageManager();
         _mode = _storage.getPlaybackMode();
+        _shuffle = _storage.getShuffle();
+        var rep = _storage.getRepeatMode();
+        if (rep != null) {
+            _repeatMode = rep as Media.RepeatMode;
+        }
     }
 
     function getMode() as String {
@@ -39,11 +44,14 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
     }
 
     function getModeToggleLabel() as String {
-        return _mode.equals("music") ? "Switch to podcast mode" : "Switch to music mode";
+        return _mode.equals("music")
+            ? (WatchUi.loadResource($.Rez.Strings.labelSwitchPodcast) as String)
+            : (WatchUi.loadResource($.Rez.Strings.labelSwitchMusic) as String);
     }
 
     function setShuffle(on as Boolean) as Void {
         _shuffle = on;
+        _storage.saveShuffle(on);
     }
 
     function getShuffle() as Boolean {
@@ -51,13 +59,14 @@ class OpenPlayerApp extends Application.AudioContentProviderApp {
     }
 
     function cycleRepeatMode() as Media.RepeatMode {
-        if (_repeatMode == null || _repeatMode == Media.REPEAT_MODE_ALL) {
-            _repeatMode = Media.REPEAT_MODE_OFF;
-        } else if (_repeatMode == Media.REPEAT_MODE_OFF) {
+        if (_repeatMode == null || _repeatMode == Media.REPEAT_MODE_OFF) {
             _repeatMode = Media.REPEAT_MODE_ONE;
-        } else {
+        } else if (_repeatMode == Media.REPEAT_MODE_ONE) {
             _repeatMode = Media.REPEAT_MODE_ALL;
+        } else {
+            _repeatMode = Media.REPEAT_MODE_OFF;
         }
+        _storage.saveRepeatMode(_repeatMode as Number);
         return _repeatMode;
     }
 

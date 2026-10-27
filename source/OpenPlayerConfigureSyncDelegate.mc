@@ -187,17 +187,11 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
 
     function onKey(evt) as Boolean {
         var key = evt.getKey();
-        if (key == 4) { return onSelect(); }
-        if (key == 7) { return onMenu(); }
-        if (key == 13) { return onPreviousPage(); }
-        if (key == 8) { return onNextPage(); }
-        if (key == 5) {
-            var playlists = _loadPlaylistsFallback();
-            if (playlists.size() == 0) {
-                _storage.clearPendingPlaylistResponse();
-                loadPlaylists();
-                return true;
-            }
+        if (key == WatchUi.KEY_ENTER || key == 4) { return onSelect(); }
+        if (key == WatchUi.KEY_MENU || key == 7) { return onMenu(); }
+        if (key == WatchUi.KEY_UP || key == 13) { return onPreviousPage(); }
+        if (key == WatchUi.KEY_DOWN || key == 8) { return onNextPage(); }
+        if (key == WatchUi.KEY_LAP || key == WatchUi.KEY_ESC || key == 5) {
             var playbackView = new OpenPlayerConfigurePlaybackView();
             WatchUi.switchToView(
                 playbackView,
@@ -215,7 +209,64 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 
+    function onTap(evt as WatchUi.ClickEvent) as Boolean {
+        var coords = evt.getCoordinates();
+        var tapY = coords[1];
+        var devSettings = System.getDeviceSettings();
+        var dc_w = devSettings.screenWidth;
+        var scaleRatio = dc_w / 240.0;
+        var isRound = devSettings.screenShape == System.SCREEN_SHAPE_ROUND;
+        var startY = ((isRound ? 58 : 45) * scaleRatio).toNumber();
+        var rowH = (25 * scaleRatio).toNumber();
+        var visibleCount = 4;
+
+        var playlists = _loadPlaylistsFallback();
+        if (playlists.size() == 0) {
+            return false;
+        }
+
+        var startIdx = _currentPlaylistIndex;
+        if (startIdx > playlists.size() - visibleCount) {
+            startIdx = playlists.size() - visibleCount;
+        }
+        if (startIdx < 0) {
+            startIdx = 0;
+        }
+
+        for (var i = 0; i < visibleCount && startIdx + i < playlists.size(); i++) {
+            var rowTop = startY + (i * rowH);
+            if (tapY >= rowTop && tapY <= rowTop + rowH) {
+                var targetIdx = startIdx + i;
+                _currentPlaylistIndex = targetIdx;
+                _storage.saveCurrentPlaylistIndex(targetIdx);
+                toggleCurrentSelection();
+                return true;
+            }
+        }
+        if (tapY < startY && startIdx > 0) {
+            return onPreviousPage();
+        } else if (tapY > startY + (visibleCount * rowH) && startIdx + visibleCount < playlists.size()) {
+            return onNextPage();
+        }
+        var bottomSyncY = ((isRound ? 180 : 195) * scaleRatio).toNumber();
+        if (tapY >= bottomSyncY) {
+            return onSelect();
+        }
+        return false;
+    }
+
     function onSelect() as Boolean {
+        var playlists = _loadPlaylistsFallback();
+        if (playlists.size() == 0) {
+            _storage.clearPendingPlaylistResponse();
+            loadPlaylists();
+            return true;
+        }
+        _syncState = _storage.loadSyncState();
+        if (_syncState.selectedPlaylistIds.size() == 0) {
+            toggleCurrentSelection();
+            return true;
+        }
         startSync();
         return true;
     }
@@ -275,15 +326,10 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
         var playlists = _loadPlaylistsFallback();
         if (playlists.size() > 0 && _currentPlaylistIndex < playlists.size()) {
             var playlist = playlists[_currentPlaylistIndex] as JellyfinPlaylist;
-            var isSelected = _syncState.selectedPlaylistIds.indexOf(playlist.id) >= 0;
+            _syncState = _storage.loadSyncState();
+            var isSelected = _syncState.isPlaylistSelected(playlist.id);
             if (isSelected) {
-                var newSelected = [];
-                for (var i = 0; i < _syncState.selectedPlaylistIds.size(); i++) {
-                    if ((_syncState.selectedPlaylistIds[i] as String).equals(playlist.id) == false) {
-                        newSelected.add(_syncState.selectedPlaylistIds[i]);
-                    }
-                }
-                _syncState.selectedPlaylistIds = newSelected;
+                _syncState.removePlaylist(playlist.id);
             } else {
                 if (!_storage.canSelectPlaylist(_syncState.selectedPlaylistIds.size())) {
                     if (_view != null) {
@@ -291,9 +337,12 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
                     }
                     return;
                 }
-                _syncState.selectedPlaylistIds.add(playlist.id);
+                _syncState.addPlaylist(playlist.id);
             }
             _storage.saveSyncState(_syncState);
+            if (_view != null) {
+                _view.refreshSelections();
+            }
             WatchUi.requestUpdate();
         }
     }
@@ -368,7 +417,6 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
     private var _fetchAwaitingResponse as Boolean = false;
     private var _fetchPollTimer as Timer.Timer? = null;
     private var _authRetried as Boolean = false;
-    private var _fetchRetryCount as Number = 0;
     private var _trackRetryCount as Number = 0;
 
     function updateStateFromView() as Void {
@@ -424,10 +472,10 @@ class OpenPlayerConfigureSyncDelegate extends WatchUi.BehaviorDelegate {
 
     function isWifiAvailable() as Boolean {
         var settings = System.getDeviceSettings();
-        var info = settings.connectionInfo;
-        if (info == null) {
+        if (!(settings has :connectionInfo)) {
             return true;
         }
+        var info = settings.connectionInfo;
         var wifi = info[:wifi];
         if (wifi == null) {
             return true;
@@ -782,7 +830,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() - ScaleHelper.scale(dc, 45),
+                ScaleHelper.bottomSafe(dc, 28, 42),
                 Graphics.FONT_XTINY,
                 "ENTER: Start | ESC: Back",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -795,7 +843,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
                 dc.getWidth() / 2,
                 ScaleHelper.topSafe(dc, 12, 34),
                 Graphics.FONT_TINY,
-                "Fetching track data...",
+                "Fetching tracks...",
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             var cp = progress["currentPlaylist"] as Number?;
@@ -812,7 +860,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                ScaleHelper.bottomSafe(dc, 22, 34),
                 Graphics.FONT_XTINY,
                 "ESC: Cancel",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -845,7 +893,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                ScaleHelper.bottomSafe(dc, 22, 34),
                 Graphics.FONT_XTINY,
                 "ENTER: OK",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -863,7 +911,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             );
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                ScaleHelper.bottomSafe(dc, 22, 34),
                 Graphics.FONT_XTINY,
                 "ENTER: Done",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -952,7 +1000,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                ScaleHelper.bottomSafe(dc, 22, 34),
                 Graphics.FONT_XTINY,
                 "ESC: Cancel",
                 Graphics.TEXT_JUSTIFY_CENTER
@@ -986,7 +1034,7 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
             }
             dc.drawText(
                 dc.getWidth() / 2,
-                dc.getHeight() - ScaleHelper.scale(dc, 15),
+                ScaleHelper.bottomSafe(dc, 22, 34),
                 Graphics.FONT_XTINY,
                 "ENTER: Done",
                 Graphics.TEXT_JUSTIFY_CENTER

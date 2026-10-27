@@ -63,6 +63,31 @@ class StorageManager {
         Storage.setValue("default_playlist_id", id);
     }
 
+    function getPreferredBitrate(durationSeconds as Number?) as Number {
+        var bitrateSetting = 0;
+        try {
+            var pref = Application.Properties.getValue("audio_bitrate") as Number?;
+            if (pref != null) {
+                bitrateSetting = pref;
+            }
+        } catch (e) {
+        }
+        if (bitrateSetting == 128) {
+            return 128000;
+        } else if (bitrateSetting == 192) {
+            return 192000;
+        } else if (bitrateSetting == 256) {
+            return 256000;
+        } else if (bitrateSetting == 320) {
+            return 320000;
+        }
+        // Auto mode (0 or unset): 128k for tracks > 20 mins, else 256k
+        if (durationSeconds != null && durationSeconds > 1200) {
+            return 128000;
+        }
+        return 256000;
+    }
+
     function setServer(url as String?) as Void {
         if (url == null) {
             return;
@@ -82,9 +107,8 @@ class StorageManager {
             prefix = "https://";
             cleanUrl = cleanUrl.substring(8, cleanUrl.length());
         }
-        var slashPos = indexOf2(cleanUrl, "/");
-        if (slashPos >= 0) {
-            cleanUrl = cleanUrl.substring(0, slashPos);
+        while (cleanUrl.length() > 0 && cleanUrl.substring(cleanUrl.length() - 1, cleanUrl.length()).equals("/")) {
+            cleanUrl = cleanUrl.substring(0, cleanUrl.length() - 1);
         }
         Storage.setValue("jellyfin_server", prefix + cleanUrl);
     }
@@ -96,26 +120,6 @@ class StorageManager {
         }
         var url = Storage.getValue("jellyfin_server") as String?;
         return url == null ? "" : url;
-    }
-
-    private function indexOf2(str as String, sub as String) as Number {
-        for (var i = 0; i <= str.length() - sub.length(); i++) {
-            var found = true;
-            for (var j = 0; j < sub.length(); j++) {
-                if (
-                    !str
-                        .substring(i + j, i + j + 1)
-                        .equals(sub.substring(j, j + 1))
-                ) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found) {
-                return i;
-            }
-        }
-        return -1;
     }
 
     function setUsername(user as String?) as Void {
@@ -369,6 +373,24 @@ class StorageManager {
         Storage.deleteValue("jellyfin_userId");
         Storage.deleteValue("sync_state");
         Storage.deleteValue("synced_tracks");
+        Storage.deleteValue("synced_tracks_str");
+    }
+
+    function saveShuffle(on as Boolean) as Void {
+        Storage.setValue("playback_shuffle", on);
+    }
+
+    function getShuffle() as Boolean {
+        var val = Storage.getValue("playback_shuffle") as Boolean?;
+        return val != null ? val : false;
+    }
+
+    function saveRepeatMode(mode as Number) as Void {
+        Storage.setValue("playback_repeat_mode", mode);
+    }
+
+    function getRepeatMode() as Number? {
+        return Storage.getValue("playback_repeat_mode") as Number?;
     }
 
     function clearDownloads() as Void {
@@ -489,7 +511,26 @@ class StorageManager {
 
     function getAvailableStorageBytes() as Number {
         var stats = System.getSystemStats();
-        return stats.freeMemory;
+        if (stats has :freeStorage && stats.freeStorage != null) {
+            return (stats.freeStorage as Number);
+        }
+        return 100 * 1024 * 1024;
+    }
+
+    private function sanitizeField(str as String?) as String {
+        if (str == null) { return ""; }
+        var res = "";
+        for (var i = 0; i < str.length(); i++) {
+            var ch = str.substring(i, i + 1);
+            if (ch.equals("|")) {
+                res = res + " ";
+            } else if (ch.equals("\n") || ch.equals("\r")) {
+                res = res + " ";
+            } else {
+                res = res + ch;
+            }
+        }
+        return res;
     }
 
     function saveSyncedTracks(tracks as Array) as Void {
@@ -530,9 +571,9 @@ class StorageManager {
             parts.add(
                 id.toString() +
                 TRACK_DELIM + (serverId != null ? serverId : "") +
-                TRACK_DELIM + (name != null ? name : "") +
-                TRACK_DELIM + (albumName != null ? albumName : "") +
-                TRACK_DELIM + (artistName != null ? artistName : "") +
+                TRACK_DELIM + sanitizeField(name) +
+                TRACK_DELIM + sanitizeField(albumName) +
+                TRACK_DELIM + sanitizeField(artistName) +
                 TRACK_DELIM + durationSeconds.toString() +
                 TRACK_DELIM + downloadSize.toString() +
                 TRACK_DELIM + (playlistId != null ? playlistId : "")
@@ -715,7 +756,7 @@ class StorageManager {
 
         var pendingKeys = {};
         for (var i = 0; i < pendingTracks.size(); i++) {
-            var pt = pendingTracks[i] as Dictionary;
+            var pt = pendingTracks[i] as Dictionary?;
             if (pt == null) { continue; }
             var pid = pt["playlistId"] as String?;
             var tid = pt["id"] != null ? pt["id"].toString() : "";
@@ -926,9 +967,9 @@ class StorageManager {
         }
         return id.toString() +
             TRACK_DELIM + (serverId != null ? serverId : "") +
-            TRACK_DELIM + (name != null ? name : "") +
-            TRACK_DELIM + (albumName != null ? albumName : "") +
-            TRACK_DELIM + (artistName != null ? artistName : "") +
+            TRACK_DELIM + sanitizeField(name) +
+            TRACK_DELIM + sanitizeField(albumName) +
+            TRACK_DELIM + sanitizeField(artistName) +
             TRACK_DELIM + durationSeconds.toString() +
             TRACK_DELIM + downloadSize.toString() +
             TRACK_DELIM + (playlistId != null ? playlistId : "");

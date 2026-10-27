@@ -14,11 +14,26 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
     private var _delegate as OpenPlayerConfigureSyncDelegate? = null;
     private var _errorCode as Number = -1;
 
+    private var _cachedLabelSyncPlaylists as String?;
+    private var _cachedNoPlaylistsMessage as String?;
+    private var _cachedHintRetryBack as String?;
+    private var _cachedLabelMoreAbove as String?;
+    private var _cachedLabelMoreBelow as String?;
+    private var _cachedHintSelectEnterSync as String?;
+    private var _cachedHintBackPlay as String?;
+
     function initialize() {
         View.initialize();
         _playlists = [];
         _selectedIndices = [];
         _initialized = false;
+        _cachedLabelSyncPlaylists = WatchUi.loadResource($.Rez.Strings.labelSyncPlaylists) as String;
+        _cachedNoPlaylistsMessage = WatchUi.loadResource($.Rez.Strings.noPlaylistsMessage) as String;
+        _cachedHintRetryBack = WatchUi.loadResource($.Rez.Strings.hintRetryBack) as String;
+        _cachedLabelMoreAbove = WatchUi.loadResource($.Rez.Strings.labelMoreAbove) as String;
+        _cachedLabelMoreBelow = WatchUi.loadResource($.Rez.Strings.labelMoreBelow) as String;
+        _cachedHintSelectEnterSync = WatchUi.loadResource($.Rez.Strings.hintSelectEnterSync) as String;
+        _cachedHintBackPlay = WatchUi.loadResource($.Rez.Strings.hintBackPlay) as String;
     }
 
     function setDelegate(delegate as OpenPlayerConfigureSyncDelegate) as Void {
@@ -46,6 +61,21 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
             }
         }
         _loadPlaylists();
+        _refreshSyncSelections(storage);
+    }
+
+    private function _refreshSyncSelections(storage as StorageManager) as Void {
+        var syncState = storage.loadSyncState();
+        _selectedIndices = [];
+        for (var i = 0; i < syncState.selectedPlaylistIds.size(); i++) {
+            addToSelection(syncState.selectedPlaylistIds[i] as String);
+        }
+    }
+
+    function refreshSelections() as Void {
+        var storage = new StorageManager();
+        _refreshSyncSelections(storage);
+        WatchUi.requestUpdate();
     }
 
     function _loadPlaylists() as Void {
@@ -55,7 +85,7 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
         var storage = new StorageManager();
         var rc = storage.getPendingPlaylistResponseCode();
 
-if (rc == 200) {
+        if (rc == 200) {
             var ids = storage.getPendingPlaylistIds();
             var names = storage.getPendingPlaylistNames();
             var syncTracks = storage.loadSyncedTracks();
@@ -88,11 +118,10 @@ if (rc == 200) {
                 _errorMessage = "";
                 _errorCode = -1;
                 _initialized = true;
-                var storage2 = new StorageManager();
-                _currentPlaylistIndex = storage2.getCurrentPlaylistIndex();
+                _currentPlaylistIndex = storage.getCurrentPlaylistIndex();
                 if (_currentPlaylistIndex >= _playlists.size() && _playlists.size() > 0) {
                     _currentPlaylistIndex = _playlists.size() - 1;
-                    storage2.saveCurrentPlaylistIndex(_currentPlaylistIndex);
+                    storage.saveCurrentPlaylistIndex(_currentPlaylistIndex);
                 }
                 if (_currentPlaylistIndex < 0) {
                     _currentPlaylistIndex = 0;
@@ -106,12 +135,16 @@ if (rc == 200) {
 
     function onUpdate(dc as Dc) as Void {
         var storage = new StorageManager();
+        var syncState = storage.loadSyncState();
         _isLoading = storage.isSyncLoading();
         if (_isLoading) {
             _statusText = "Loading...";
         }
 
-        _loadPlaylists();
+        if (!_initialized) {
+            _loadPlaylists();
+        }
+        _refreshSyncSelections(storage);
 
         _currentPlaylistIndex = storage.getCurrentPlaylistIndex();
         if (_playlists.size() > 0 && _currentPlaylistIndex >= _playlists.size()) {
@@ -121,21 +154,16 @@ if (rc == 200) {
         if (_currentPlaylistIndex < 0) {
             _currentPlaylistIndex = 0;
         }
-        var syncState = storage.loadSyncState();
-        _selectedIndices = [];
-        for (var i = 0; i < syncState.selectedPlaylistIds.size(); i++) {
-            addToSelection(syncState.selectedPlaylistIds[i] as String);
-        }
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
 
-        var title = "Sync Playlists";
+        var titleY = ScaleHelper.topSafe(dc, 14, 24);
         dc.drawText(
             dc.getWidth() / 2,
-            ScaleHelper.scale(dc, 8),
+            titleY,
             Graphics.FONT_TINY,
-            title,
+            _cachedLabelSyncPlaylists != null ? _cachedLabelSyncPlaylists : "Sync Playlists",
             Graphics.TEXT_JUSTIFY_CENTER
         );
 
@@ -159,7 +187,7 @@ if (rc == 200) {
                 Graphics.FONT_TINY,
                 _errorMessage.length() > 0
                     ? _errorMessage
-                    : "No playlists found",
+                    : (_cachedNoPlaylistsMessage != null ? _cachedNoPlaylistsMessage : "No playlists"),
                 Graphics.TEXT_JUSTIFY_CENTER
             );
             if (_errorCode != -1) {
@@ -173,7 +201,7 @@ if (rc == 200) {
                 );
             }
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            var hint = _errorMessage.length() > 0 ? "Retry | ESC: Back" : "Retry";
+            var hint = _cachedHintRetryBack != null ? _cachedHintRetryBack : "ENTER: Retry | ESC: Back";
             dc.drawText(
                 dc.getWidth() / 2,
                 dc.getHeight() / 2 + ScaleHelper.scale(dc, 14),
@@ -194,7 +222,9 @@ if (rc == 200) {
         }
 
         var rowH = ScaleHelper.scale(dc, 25);
-        var y = ScaleHelper.scale(dc, 55);
+        var y = ScaleHelper.topSafe(dc, 45, 58);
+        var sideInset = ScaleHelper.listSideSafe(dc);
+        var rowWidth = dc.getWidth() - (sideInset * 2);
         for (
             var i = 0;
             i < visibleCount && startIdx + i < _playlists.size();
@@ -202,11 +232,11 @@ if (rc == 200) {
         ) {
             var idx = startIdx + i;
             var playlist = _playlists[idx] as JellyfinPlaylist;
-            var isSelected = isPlaylistSelected(playlist.id);
+            var isSelected = syncState.isPlaylistSelected(playlist.id);
 
             if (idx == _currentPlaylistIndex) {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_WHITE);
-                dc.fillRectangle(ScaleHelper.scale(dc, 5), y, dc.getWidth() - ScaleHelper.scale(dc, 10), rowH);
+                dc.fillRectangle(sideInset, y, rowWidth, rowH);
                 dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
             } else {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -214,24 +244,31 @@ if (rc == 200) {
 
             var checkMark = isSelected ? "[X]" : "[ ]";
             dc.drawText(
-                ScaleHelper.scale(dc, 10),
+                sideInset + ScaleHelper.scale(dc, 4),
                 y,
                 Graphics.FONT_TINY,
                 checkMark,
                 Graphics.TEXT_JUSTIFY_LEFT
             );
+
+            var badgeText = "[" + playlist.trackCount + "]";
+            var badgeW = dc.getTextWidthInPixels(badgeText, Graphics.FONT_TINY);
+            var checkW = dc.getTextWidthInPixels(checkMark, Graphics.FONT_TINY) + ScaleHelper.scale(dc, 8);
+            var nameMaxW = rowWidth - checkW - badgeW - ScaleHelper.scale(dc, 8);
+            var displayName = ScaleHelper.truncateText(dc, playlist.name, Graphics.FONT_TINY, nameMaxW);
+
             dc.drawText(
-                ScaleHelper.scale(dc, 35),
+                sideInset + checkW,
                 y,
                 Graphics.FONT_TINY,
-                playlist.name,
+                displayName,
                 Graphics.TEXT_JUSTIFY_LEFT
             );
             dc.drawText(
-                dc.getWidth() - ScaleHelper.scale(dc, 10),
+                sideInset + rowWidth - ScaleHelper.scale(dc, 4),
                 y,
                 Graphics.FONT_TINY,
-                "[" + playlist.trackCount + "]",
+                badgeText,
                 Graphics.TEXT_JUSTIFY_RIGHT
             );
 
@@ -240,29 +277,30 @@ if (rc == 200) {
 
         if (startIdx > 0) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 35), Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.topSafe(dc, 4, 8), Graphics.FONT_XTINY, _cachedLabelMoreAbove != null ? _cachedLabelMoreAbove : "More above", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         if (startIdx + visibleCount < _playlists.size()) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 85), Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 65, 80), Graphics.FONT_XTINY, _cachedLabelMoreBelow != null ? _cachedLabelMoreBelow : "More below", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.drawText(
             dc.getWidth() / 2,
-            dc.getHeight() - ScaleHelper.scale(dc, 65),
+            ScaleHelper.bottomSafe(dc, 45, 60),
             Graphics.FONT_XTINY,
-            "Select | ENTER: sync",
+            _cachedHintSelectEnterSync != null ? _cachedHintSelectEnterSync : "MENU: select | ENTER: sync",
             Graphics.TEXT_JUSTIFY_CENTER
         );
         
-        dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
+        // High contrast fix: COLOR_LT_GRAY instead of COLOR_DK_GRAY for sunlight readability
+        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
         dc.drawText(
             dc.getWidth() / 2,
-            dc.getHeight() - ScaleHelper.scale(dc, 45),
+            ScaleHelper.bottomSafe(dc, 25, 40),
             Graphics.FONT_XTINY,
-            "Play",
+            _cachedHintBackPlay != null ? _cachedHintBackPlay : "BACK: play",
             Graphics.TEXT_JUSTIFY_CENTER
         );
     }
@@ -270,16 +308,9 @@ if (rc == 200) {
     function onHide() as Void {}
 
     function isPlaylistSelected(id as String) as Boolean {
-        for (var i = 0; i < _selectedIndices.size(); i++) {
-            var idx = _selectedIndices[i] as Number;
-            if (idx >= 0 && idx < _playlists.size()) {
-                var playlist = _playlists[idx] as JellyfinPlaylist;
-                if (playlist != null && playlist.id.equals(id)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        var storage = new StorageManager();
+        var syncState = storage.loadSyncState();
+        return syncState.isPlaylistSelected(id);
     }
 
     function addToSelection(id as String) as Void {

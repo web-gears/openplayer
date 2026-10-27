@@ -2,10 +2,19 @@
     <setting propertyKey="@Properties.jellyfin_server" title="@Strings.serverTitle">
         <settingConfig type="alphaNumeric" />
     </setting>
-    <setting propertyKey="@Properties.jellyfin_username" title="Username">
+    <setting propertyKey="@Properties.jellyfin_username" title="@Strings.usernameTitle">
         <settingConfig type="alphaNumeric" />
     </setting>
-    <setting propertyKey="@Properties.jellyfin_password" title="Password">
+    <setting propertyKey="@Properties.jellyfin_password" title="@Strings.passwordTitle">
         <settingConfig type="password" />
+    </setting>
+    <setting propertyKey="@Properties.audio_bitrate" title="@Strings.bitrateTitle">
+        <settingConfig type="list">
+            <listEntry value="0">@Strings.bitrateAuto</listEntry>
+            <listEntry value="128">@Strings.bitrate128</listEntry>
+            <listEntry value="192">@Strings.bitrate192</listEntry>
+            <listEntry value="256">@Strings.bitrate256</listEntry>
+            <listEntry value="320">@Strings.bitrate320</listEntry>
+        </settingConfig>
     </setting>
 </settings>

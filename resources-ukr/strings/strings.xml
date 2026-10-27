@@ -1,0 +1,102 @@
+<strings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <string id="AppName">OpenPlayer</string>
+
+    <string id="serverTitle">URL сервера</string>
+    <string id="usernameTitle">Ім'я користувача</string>
+    <string id="passwordTitle">Пароль</string>
+    <string id="serverMessage">Введіть адресу сервера Jellyfin</string>
+
+    <string id="bitrateTitle">Аудіо бітрейт</string>
+    <string id="bitrateAuto">Авто (128к / 256к)</string>
+    <string id="bitrate128">128 кбіт/с (Економний)</string>
+    <string id="bitrate192">192 кбіт/с (Стандартний)</string>
+    <string id="bitrate256">256 кбіт/с (Високий)</string>
+    <string id="bitrate320">320 кбіт/с (Максимальний)</string>
+
+    <string id="welcomeTitle">Вітаємо</string>
+    <string id="welcomeMessage">Налаштування\nсервера Jellyfin</string>
+    <string id="reviewTitle">Перевірка</string>
+    <string id="reviewMessage">Перевірте ваші налаштування</string>
+    <string id="syncTitle">Синхронізація</string>
+    <string id="syncMessage">Почати синхронізацію списків</string>
+
+    <string id="loadingMessage">Завантаження...</string>
+    <string id="noPlaylistsMessage">Списки не знайдено</string>
+    <string id="errorAuthFailed">Помилка автентифікації</string>
+    <string id="errorLoadFailed">Не вдалося завантажити списки</string>
+    <string id="errorSyncFailed">Помилка синхронізації</string>
+    <string id="errorNoSpace">Недостатньо пам'яті</string>
+    <string id="errorSelectPlaylists">Спочатку виберіть списки</string>
+    <string id="errorNotConfigured">Сервер не налаштовано</string>
+
+    <string id="syncComplete">Синхронізацію завершено!</string>
+    <string id="syncingTracks">Синхронізація треків...</string>
+    <string id="loadingPlaylist">Завантаження списку...</string>
+
+    <string id="tracksCount">$1$ треків</string>
+    <string id="storageUsed">Пам'ять: $1$</string>
+    <string id="noTracksSynced">Немає треків</string>
+
+    <!-- UI Labels & Hints -->
+    <string id="labelPlaylists">Плейлісти</string>
+    <string id="labelSelectTrack">Виберіть трек</string>
+    <string id="labelNoTracks">Немає треків</string>
+    <string id="labelOptions">Опції</string>
+    <string id="labelSettings">Налаштування</string>
+    <string id="labelAbout">Про програму</string>
+    <string id="labelSyncPlaylists">Синхронізація</string>
+    <string id="labelRemovePlaylist">Видалити список</string>
+    <string id="labelRemoveTrack">Видалити трек</string>
+    <string id="labelClearDownloads">Очистити файли</string>
+    <string id="labelYes">Так</string>
+    <string id="labelNo">Ні</string>
+    <string id="labelBack">Назад</string>
+    <string id="labelDone">Готово</string>
+    <string id="labelRetry">Повторити</string>
+    <string id="labelPlay">Грати</string>
+    <string id="labelSupportDev">Підтримка:</string>
+    <string id="promptRemovePlaylist">Видалити список?</string>
+    <string id="promptRemoveTrack">Видалити трек?</string>
+    <string id="promptClearDownloads">Очистити все?</string>
+    <string id="toastDownloadsCleared">Завантаження очищено</string>
+    <string id="toastPlaylistRemoved">Список видалено</string>
+    <string id="toastTrackRemoved">Трек видалено</string>
+    <string id="toastPodcastMode">Режим подкастів</string>
+    <string id="toastMusicMode">Музичний режим</string>
+    <string id="labelSwitchPodcast">Режим подкастів</string>
+    <string id="labelSwitchMusic">Музичний режим</string>
+    <string id="labelMoreAbove">^ більше вище</string>
+    <string id="labelMoreBelow">v більше нижче</string>
+    <string id="hintPressEnterConnect">Натисніть ENTER для\nпідключення</string>
+    <string id="hintMenuSettings">MENU: Налаштування</string>
+    <string id="hintNoSyncedTracks">Немає треків\nMENU: Налаштування</string>
+    <string id="hintEnterSelect">ENTER: вибрати\nMENU: опції</string>
+    <string id="hintBackPlaylists">BACK: списки\nENTER: грати</string>
+    <string id="hintSelectEnterSync">MENU: вибір | ENTER: синхр</string>
+    <string id="hintBackPlay">BACK: грати</string>
+    <string id="hintRetryBack">ENTER: Повторити | ESC: Назад</string>
+    <string id="hintBack">BACK: Назад</string>
+    <string id="hintConfirm">ENTER: вибрати\nESC: скасувати</string>
+    <string id="hintChooseBack">ENTER: вибір\nESC: назад</string>
+
+    <!-- Settings Wizard -->
+    <string id="wizardChoiceQr">ВГОРУ: QR-код</string>
+    <string id="wizardChoiceGcm">ВНИЗ: додаток</string>
+    <string id="wizardQrLoading">Створення сесії...</string>
+    <string id="wizardQrTitle">QR-код</string>
+    <string id="wizardQrConfirm">ENTER: підтвердити</string>
+    <string id="wizardGcmTitle">Додаток</string>
+    <string id="wizardGcmConfigure">Налаштуйте в GCM</string>
+    <string id="wizardGcmEnterConnect">ENTER: з'єднати</string>
+    <string id="wizardGcmUseGcm">Використовуйте додаток Garmin Connect для вводу адреси сервера</string>
+    <string id="wizardGcmCheckSettings">ENTER: перевірити</string>
+    <string id="wizardGcmEscBack">ESC: назад</string>
+    <string id="wizardReviewServer">Сервер:</string>
+    <string id="wizardReviewUser">Користувач:</string>
+    <string id="wizardReviewPass">Пароль:</string>
+    <string id="wizardReviewSave">ENTER: зберегти\nBACK: назад</string>
+    <string id="wizardDoneStartSync">[Синхронізація]</string>
+    <string id="wizardDoneSyncNow">ENTER: синхронізувати\nBACK: пізніше</string>
+    <string id="wizardTimeRemaining">$1$ залишилось</string>
+    <string id="wizardTimeout">Таймаут - ESC: назад</string>
+</strings>

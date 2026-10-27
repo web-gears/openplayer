@@ -129,6 +129,22 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
 
     }
 
+    private static var _prngSeed as Number = 0;
+
+    private function nextRandom(max as Number) as Number {
+        if (_prngSeed == 0) {
+            _prngSeed = Toybox.System.getTimer();
+            if (_prngSeed == 0) {
+                _prngSeed = 1234567;
+            }
+        }
+        _prngSeed = ((_prngSeed * 1103515245) + 12345) & 0x7FFFFFFF;
+        if (max <= 0) {
+            return 0;
+        }
+        return _prngSeed % max;
+    }
+
     private function generateShuffleOrder() as Void {
         _shuffleOrder = [];
         for (var i = 0; i < _tracks.size(); i++) {
@@ -136,7 +152,7 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
         }
 
         for (var i = _shuffleOrder.size() - 1; i > 0; i--) {
-            var j = Toybox.System.getTimer() % (i + 1);
+            var j = nextRandom(i + 1);
             var temp = _shuffleOrder[i] as Number;
             _shuffleOrder[i] = _shuffleOrder[j] as Number;
             _shuffleOrder[j] = temp;
@@ -166,20 +182,17 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
 
         var actualIndex = getActualIndex();
         if (actualIndex >= _contentRefs.size()) {
-            _currentIndex++;
             return null;
         }
 
         var contentRef = _contentRefs[actualIndex] as Media.ContentRef?;
         if (contentRef == null) {
-            _currentIndex++;
             return null;
         }
 
         var contentItem = Media.getCachedContentObj(contentRef) as Media.Content?;
 
         if (!(contentItem instanceof Media.Content)) {
-            _currentIndex++;
             return null;
         }
 
@@ -223,13 +236,27 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
     function next() as Content? {
         if (
             _tracks == null ||
-            _tracks.size() == 0 ||
-            _currentIndex >= _tracks.size()
+            _tracks.size() == 0
         ) {
             return null;
         }
 
+        var rep = repeatMode();
+        if (rep == Media.REPEAT_MODE_ONE) {
+            return get();
+        }
+
+        if (_currentIndex + 1 >= _tracks.size()) {
+            if (rep == Media.REPEAT_MODE_ALL) {
+                _currentIndex = 0;
+                _storage.savePlaybackPosition(_currentIndex);
+                return get();
+            }
+            return null;
+        }
+
         _currentIndex = _currentIndex + 1;
+        _storage.savePlaybackPosition(_currentIndex);
         return get();
     }
 
@@ -266,6 +293,10 @@ class OpenPlayerContentIterator extends Media.ContentIterator {
     function previous() as Content? {
         if (_currentIndex > 0) {
             _currentIndex = _currentIndex - 1;
+            _storage.savePlaybackPosition(_currentIndex);
+        } else if (repeatMode() == Media.REPEAT_MODE_ALL && _tracks != null && _tracks.size() > 0) {
+            _currentIndex = _tracks.size() - 1;
+            _storage.savePlaybackPosition(_currentIndex);
         }
         return get();
     }

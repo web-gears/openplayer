@@ -23,4 +23,8 @@ class AboutDelegate extends WatchUi.BehaviorDelegate {
         WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
         return true;
     }
+
+    function onTap(evt as WatchUi.ClickEvent) as Lang.Boolean {
+        return onBack();
+    }
 }

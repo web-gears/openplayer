@@ -1,0 +1,102 @@
+<strings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://developer.garmin.com/downloads/connect-iq/resources.xsd">
+    <string id="AppName">OpenPlayer</string>
+
+    <string id="serverTitle">Server URL</string>
+    <string id="usernameTitle">Username</string>
+    <string id="passwordTitle">Password</string>
+    <string id="serverMessage">Enter your Jellyfin server address</string>
+
+    <string id="bitrateTitle">Audio Bitrate</string>
+    <string id="bitrateAuto">Auto (128k / 256k)</string>
+    <string id="bitrate128">128 kbps (Low)</string>
+    <string id="bitrate192">192 kbps (Standard)</string>
+    <string id="bitrate256">256 kbps (High)</string>
+    <string id="bitrate320">320 kbps (Maximum)</string>
+
+    <string id="welcomeTitle">Welcome</string>
+    <string id="welcomeMessage">Setup your\nJellyfin server</string>
+    <string id="reviewTitle">Review</string>
+    <string id="reviewMessage">Review your settings</string>
+    <string id="syncTitle">Sync</string>
+    <string id="syncMessage">Start syncing playlists</string>
+
+    <string id="loadingMessage">Loading...</string>
+    <string id="noPlaylistsMessage">No playlists found</string>
+    <string id="errorAuthFailed">Authentication failed</string>
+    <string id="errorLoadFailed">Failed to load playlists</string>
+    <string id="errorSyncFailed">Sync failed</string>
+    <string id="errorNoSpace">Not enough storage space</string>
+    <string id="errorSelectPlaylists">Select playlists first</string>
+    <string id="errorNotConfigured">Server not configured</string>
+
+    <string id="syncComplete">Sync Complete!</string>
+    <string id="syncingTracks">Syncing tracks...</string>
+    <string id="loadingPlaylist">Loading playlist...</string>
+
+    <string id="tracksCount">$1$ tracks</string>
+    <string id="storageUsed">Storage: $1$</string>
+    <string id="noTracksSynced">No tracks synced</string>
+
+    <!-- UI Labels & Hints -->
+    <string id="labelPlaylists">Playlists</string>
+    <string id="labelSelectTrack">Select Track</string>
+    <string id="labelNoTracks">No tracks</string>
+    <string id="labelOptions">Options</string>
+    <string id="labelSettings">Settings</string>
+    <string id="labelAbout">About</string>
+    <string id="labelSyncPlaylists">Sync Playlists</string>
+    <string id="labelRemovePlaylist">Remove Playlist</string>
+    <string id="labelRemoveTrack">Remove Track</string>
+    <string id="labelClearDownloads">Clear Downloads</string>
+    <string id="labelYes">Yes</string>
+    <string id="labelNo">No</string>
+    <string id="labelBack">Back</string>
+    <string id="labelDone">Done</string>
+    <string id="labelRetry">Retry</string>
+    <string id="labelPlay">Play</string>
+    <string id="labelSupportDev">Support:</string>
+    <string id="promptRemovePlaylist">Remove Playlist?</string>
+    <string id="promptRemoveTrack">Remove Track?</string>
+    <string id="promptClearDownloads">Clear downloads?</string>
+    <string id="toastDownloadsCleared">Downloads cleared</string>
+    <string id="toastPlaylistRemoved">Playlist removed</string>
+    <string id="toastTrackRemoved">Track removed</string>
+    <string id="toastPodcastMode">Podcast mode</string>
+    <string id="toastMusicMode">Music mode</string>
+    <string id="labelSwitchPodcast">Podcast Mode</string>
+    <string id="labelSwitchMusic">Music Mode</string>
+    <string id="labelMoreAbove">^ more above</string>
+    <string id="labelMoreBelow">v more below</string>
+    <string id="hintPressEnterConnect">Press ENTER to\nconnect</string>
+    <string id="hintMenuSettings">MENU: Settings</string>
+    <string id="hintNoSyncedTracks">No synced tracks\nMENU: Setup</string>
+    <string id="hintEnterSelect">ENTER: select\nMENU: options</string>
+    <string id="hintBackPlaylists">BACK: playlists\nENTER: play</string>
+    <string id="hintSelectEnterSync">MENU: pick | ENTER: sync</string>
+    <string id="hintBackPlay">BACK: play</string>
+    <string id="hintRetryBack">ENTER: Retry | ESC: Back</string>
+    <string id="hintBack">BACK: Back</string>
+    <string id="hintConfirm">ENTER: choose\nESC: cancel</string>
+    <string id="hintChooseBack">ENTER: choose\nESC: back</string>
+
+    <!-- Settings Wizard -->
+    <string id="wizardChoiceQr">UP: QR code</string>
+    <string id="wizardChoiceGcm">DOWN: phone app</string>
+    <string id="wizardQrLoading">Creating session...</string>
+    <string id="wizardQrTitle">QR Code</string>
+    <string id="wizardQrConfirm">ENTER: confirm</string>
+    <string id="wizardGcmTitle">Phone App</string>
+    <string id="wizardGcmConfigure">Configure in GCM</string>
+    <string id="wizardGcmEnterConnect">ENTER: connect</string>
+    <string id="wizardGcmUseGcm">Use Garmin Connect Mobile app to enter server URL and login</string>
+    <string id="wizardGcmCheckSettings">ENTER: check settings</string>
+    <string id="wizardGcmEscBack">ESC: back</string>
+    <string id="wizardReviewServer">Server:</string>
+    <string id="wizardReviewUser">User:</string>
+    <string id="wizardReviewPass">Pass:</string>
+    <string id="wizardReviewSave">ENTER: save\nBACK: back</string>
+    <string id="wizardDoneStartSync">[Start Sync]</string>
+    <string id="wizardDoneSyncNow">ENTER: sync now\nBACK: later</string>
+    <string id="wizardTimeRemaining">$1$ remaining</string>
+    <string id="wizardTimeout">Timeout - ESC: back</string>
+</strings>

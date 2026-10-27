@@ -20,6 +20,22 @@ class OpenPlayerContentDelegate extends Media.ContentDelegate {
         songEvent as Media.SongEvent,
         playbackPosition as Lang.Number or Media.PlaybackPosition
     ) as Void {
+        if (contentRefId != null) {
+            var storage = new StorageManager();
+            var refIdStr = contentRefId.toString();
+            var tracks = storage.loadSyncedTracks();
+            for (var i = 0; i < tracks.size(); i++) {
+                var t = tracks[i] as JellyfinTrack;
+                if (t != null && t.id != null) {
+                    var storedRef = Application.Storage.getValue("tr_" + t.id.toString()) as String?;
+                    if (storedRef != null && storedRef.equals(refIdStr)) {
+                        storage.savePlaybackPosition(i);
+                        storage.saveCurrentTrackIndex(i);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     function onShuffle() as Void {

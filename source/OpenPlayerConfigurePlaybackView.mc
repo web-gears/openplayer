@@ -12,8 +12,29 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
     private var _scrollOffset as Number = 0;
     private var _playlistIndexForTracks as Number = 0;
 
+    private var _cachedLabelPlaylists as String?;
+    private var _cachedLabelSelectTrack as String?;
+    private var _cachedLabelMoreAbove as String?;
+    private var _cachedLabelMoreBelow as String?;
+    private var _cachedHintEnterSelect as String?;
+    private var _cachedHintBackPlaylists as String?;
+    private var _cachedLabelNoTracks as String?;
+    private var _cachedHintPressEnterConnect as String?;
+    private var _cachedHintMenuSettings as String?;
+    private var _cachedHintNoSyncedTracks as String?;
+
     function initialize() {
         View.initialize();
+        _cachedLabelPlaylists = WatchUi.loadResource($.Rez.Strings.labelPlaylists) as String;
+        _cachedLabelSelectTrack = WatchUi.loadResource($.Rez.Strings.labelSelectTrack) as String;
+        _cachedLabelMoreAbove = WatchUi.loadResource($.Rez.Strings.labelMoreAbove) as String;
+        _cachedLabelMoreBelow = WatchUi.loadResource($.Rez.Strings.labelMoreBelow) as String;
+        _cachedHintEnterSelect = WatchUi.loadResource($.Rez.Strings.hintEnterSelect) as String;
+        _cachedHintBackPlaylists = WatchUi.loadResource($.Rez.Strings.hintBackPlaylists) as String;
+        _cachedLabelNoTracks = WatchUi.loadResource($.Rez.Strings.labelNoTracks) as String;
+        _cachedHintPressEnterConnect = WatchUi.loadResource($.Rez.Strings.hintPressEnterConnect) as String;
+        _cachedHintMenuSettings = WatchUi.loadResource($.Rez.Strings.hintMenuSettings) as String;
+        _cachedHintNoSyncedTracks = WatchUi.loadResource($.Rez.Strings.hintNoSyncedTracks) as String;
     }
 
     function onLayout(dc as Dc) as Void {}
@@ -120,23 +141,30 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
             var token = storage.getAuthToken();
             if (token == null || token.length() == 0) {
                 var server = storage.getServer();
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, "Press ENTER to\nconnect", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, _cachedHintPressEnterConnect != null ? _cachedHintPressEnterConnect : "Press ENTER to\nconnect", Graphics.TEXT_JUSTIFY_CENTER);
                 dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 30), Graphics.FONT_XTINY, server, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "Menu: settings", Graphics.TEXT_JUSTIFY_CENTER);
+                var maxServerW = dc.getWidth() - (ScaleHelper.listSideSafe(dc) * 2);
+                var truncatedServer = ScaleHelper.truncateText(dc, server != null ? server : "", Graphics.FONT_XTINY, maxServerW);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 30), Graphics.FONT_XTINY, truncatedServer, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+                dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 30, 45), Graphics.FONT_XTINY, _cachedHintMenuSettings != null ? _cachedHintMenuSettings : "MENU: Settings", Graphics.TEXT_JUSTIFY_CENTER);
             } else {
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, "No synced tracks\nMenu: Setup", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 40), Graphics.FONT_MEDIUM, _cachedHintNoSyncedTracks != null ? _cachedHintNoSyncedTracks : "No synced tracks\nMENU: Setup", Graphics.TEXT_JUSTIFY_CENTER);
             }
             return;
         }
 
         if (_selectedIndex > 0) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 35), Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.topSafe(dc, 6, 16), Graphics.FONT_XTINY, _cachedLabelMoreAbove != null ? _cachedLabelMoreAbove : "More above", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
-        dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 20), Graphics.FONT_MEDIUM, "Playlists", Graphics.TEXT_JUSTIFY_CENTER);
+        var titleY = ScaleHelper.topSafe(dc, 10, 20);
+        var titleFont = Graphics.FONT_SMALL;
+        var maxTitleW = dc.getWidth() - (ScaleHelper.listSideSafe(dc) * 2);
+        var titleStr = _cachedLabelPlaylists != null ? _cachedLabelPlaylists : "Playlists";
+        var truncatedTitle = ScaleHelper.truncateText(dc, titleStr, titleFont, maxTitleW);
+        dc.drawText(dc.getWidth() / 2, titleY, titleFont, truncatedTitle, Graphics.TEXT_JUSTIFY_CENTER);
 
         var visibleCount = 3;
         var startIdx = _selectedIndex;
@@ -148,28 +176,33 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         }
 
         var rowH = ScaleHelper.scale(dc, 25);
-        var y = ScaleHelper.scale(dc, 60);
+        var y = ScaleHelper.topSafe(dc, 48, 62);
+        var sideInset = ScaleHelper.listSideSafe(dc);
+        var maxTextWidth = dc.getWidth() - (sideInset * 2) - ScaleHelper.scale(dc, 14);
         for (var i = 0; i < visibleCount && startIdx + i < _playlists.size(); i++) {
             var idx = startIdx + i;
             var playlist = _playlists[idx] as Dictionary;
+            var rawName = (idx + 1) + ": " + (playlist["name"] as String);
+            var displayName = ScaleHelper.truncateText(dc, rawName, Graphics.FONT_TINY, maxTextWidth);
+
             if (idx == _selectedIndex) {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.fillRectangle(ScaleHelper.scale(dc, 5), y, dc.getWidth() - ScaleHelper.scale(dc, 10), rowH);
+                dc.fillRectangle(sideInset, y, dc.getWidth() - (sideInset * 2), rowH);
                 dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
             } else {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             }
-            dc.drawText(ScaleHelper.scale(dc, 20), y, Graphics.FONT_TINY, (idx + 1) + ": " + (playlist["name"] as String), Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(sideInset + ScaleHelper.scale(dc, 8), y, Graphics.FONT_TINY, displayName, Graphics.TEXT_JUSTIFY_LEFT);
             y = y + rowH;
         }
 
         if (startIdx + visibleCount < _playlists.size()) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 65), Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 45, 60), Graphics.FONT_XTINY, _cachedLabelMoreBelow != null ? _cachedLabelMoreBelow : "More below", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: select\nMenu: options", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 25, 40), Graphics.FONT_XTINY, _cachedHintEnterSelect != null ? _cachedHintEnterSelect : "ENTER: select", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     private function renderTrackList(dc as Dc) as Void {
@@ -187,7 +220,7 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         }
 
         if (filteredTracks.size() == 0) {
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_MEDIUM, "No tracks", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_MEDIUM, _cachedLabelNoTracks != null ? _cachedLabelNoTracks : "No tracks", Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 
@@ -212,7 +245,12 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         }
         _scrollOffset = scrollOffset;
 
-        dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 20), Graphics.FONT_MEDIUM, "Select Track", Graphics.TEXT_JUSTIFY_CENTER);
+        var titleY = ScaleHelper.topSafe(dc, 10, 20);
+        var titleFont = Graphics.FONT_SMALL;
+        var maxTitleW = dc.getWidth() - (ScaleHelper.listSideSafe(dc) * 2);
+        var titleStr = _cachedLabelSelectTrack != null ? _cachedLabelSelectTrack : "Select track";
+        var truncatedTitle = ScaleHelper.truncateText(dc, titleStr, titleFont, maxTitleW);
+        dc.drawText(dc.getWidth() / 2, titleY, titleFont, truncatedTitle, Graphics.TEXT_JUSTIFY_CENTER);
 
         var startIdx = scrollOffset;
         if (startIdx > filteredTracks.size() - visibleCount) {
@@ -223,33 +261,38 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         }
 
         var rowH = ScaleHelper.scale(dc, 25);
-        var y = ScaleHelper.scale(dc, 60);
+        var y = ScaleHelper.topSafe(dc, 48, 62);
+        var sideInset = ScaleHelper.listSideSafe(dc);
+        var maxTextWidth = dc.getWidth() - (sideInset * 2) - ScaleHelper.scale(dc, 14);
         for (var i = 0; i < visibleCount && startIdx + i < filteredTracks.size(); i++) {
             var idx = startIdx + i;
             var track = filteredTracks[idx] as JellyfinTrack;
+            var rawTrackName = (idx + 1) + ": " + track.name;
+            var displayTrackName = ScaleHelper.truncateText(dc, rawTrackName, Graphics.FONT_TINY, maxTextWidth);
+
             if (idx == _trackSelectedIndex) {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.fillRectangle(ScaleHelper.scale(dc, 5), y, dc.getWidth() - ScaleHelper.scale(dc, 10), rowH);
+                dc.fillRectangle(sideInset, y, dc.getWidth() - (sideInset * 2), rowH);
                 dc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_TRANSPARENT);
             } else {
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
             }
-            dc.drawText(ScaleHelper.scale(dc, 20), y, Graphics.FONT_TINY, (idx + 1) + ": " + track.name, Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(sideInset + ScaleHelper.scale(dc, 8), y, Graphics.FONT_TINY, displayTrackName, Graphics.TEXT_JUSTIFY_LEFT);
             y = y + rowH;
         }
 
         if (scrollOffset > 0) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 35), Graphics.FONT_XTINY, "^ more above", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.topSafe(dc, 6, 16), Graphics.FONT_XTINY, _cachedLabelMoreAbove != null ? _cachedLabelMoreAbove : "More above", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         if (startIdx + visibleCount < filteredTracks.size()) {
             dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 65), Graphics.FONT_XTINY, "v more below", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 45, 60), Graphics.FONT_XTINY, _cachedLabelMoreBelow != null ? _cachedLabelMoreBelow : "More below", Graphics.TEXT_JUSTIFY_CENTER);
         }
         
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "Back: playlists\nENTER: play", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 25, 40), Graphics.FONT_XTINY, _cachedHintBackPlaylists != null ? _cachedHintBackPlaylists : "BACK: playlists", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     function setMode(mode as String) as Void {

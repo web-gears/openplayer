@@ -2,6 +2,7 @@ import Toybox.Communications;
 import Toybox.Lang;
 import Toybox.System;
 import Toybox.PersistedContent;
+import Toybox.Media;
 import Toybox.Timer;
 
 const AUTH_METHOD_ONRESPONSE = 0;
@@ -84,7 +85,15 @@ class JellyfinClient {
     }
 
     private static function buildClientHeader() as String {
-        return "MediaBrowser Client=\"OpenPlayer\", Device=\"Fenix 6S Pro\", DeviceId=\"openplayer-001\", Version=\"1.0.0\"";
+        var deviceName = "GarminDevice";
+        try {
+            var settings = System.getDeviceSettings();
+            if (settings has :partNumber && settings.partNumber != null && (settings.partNumber as String).length() > 0) {
+                deviceName = settings.partNumber as String;
+            }
+        } catch (e) {
+        }
+        return "MediaBrowser Client=\"OpenPlayer\", Device=\"" + deviceName + "\", DeviceId=\"openplayer-" + deviceName + "\", Version=\"1.0.0\"";
     }
 
     private static function buildTokenHeader(token as String) as String {
@@ -346,7 +355,7 @@ class JellyfinClient {
                 var name = item["Name"] as String?;
                 var album = item["Album"] as String?;
                 var artists = item["Artists"] as Array?;
-                var runTimeTicks = item["RunTimeTicks"] as Number?;
+                var runTimeTicks = item["RunTimeTicks"];
 
                 if (id != null && name != null) {
                     var artistName = "Unknown Artist";
@@ -355,8 +364,14 @@ class JellyfinClient {
                     }
 
                     var albumName = album != null ? album : "Unknown Album";
-                    var durationSeconds =
-                        runTimeTicks != null ? runTimeTicks / 10000000 : 0;
+                    var durationSeconds = 0;
+                    if (runTimeTicks instanceof Long) {
+                        durationSeconds = ((runTimeTicks as Long) / 10000000L).toNumber();
+                    } else if (runTimeTicks instanceof Number) {
+                        durationSeconds = (runTimeTicks as Number) / 10000000;
+                    } else if (runTimeTicks instanceof Float || runTimeTicks instanceof Double) {
+                        durationSeconds = ((runTimeTicks as Float) / 10000000.0).toNumber();
+                    }
 
                     tracks.add(
                         new JellyfinTrack(
@@ -381,17 +396,7 @@ class JellyfinClient {
 
     function downloadAndSaveTrack(
         itemId as Object,
-        callback as
-            (Method
-                (
-                    responseCode as Number,
-                    data as
-                        Null or
-                            Dictionary or
-                            String or
-                            PersistedContent.Iterator
-                ) as Void
-            ),
+        callback as Method,
         bitrate as Number or Null
     ) as Void {
         var server = _storage.getServer();
@@ -419,6 +424,9 @@ class JellyfinClient {
     }
 
     function cancelPendingRequests() as Void {
+        stopPlaylistPoll();
+        _pendingMethod = -1;
+        _playlistAwaitingResponse = false;
         Communications.cancelAllRequests();
     }
 
@@ -447,14 +455,21 @@ class JellyfinClient {
     }
 
     private function buildUrl(server as String, path as String) as String {
-        if (server.length() >= 8 && server.substring(0, 8).equals("https://")) {
-            return server + path;
-        } else if (
-            server.length() >= 7 &&
-            server.substring(0, 7).equals("http://")
-        ) {
-            return server + path;
+        var s = server;
+        while (s.length() > 0 && s.substring(s.length() - 1, s.length()).equals("/")) {
+            s = s.substring(0, s.length() - 1);
         }
-        return "https://" + server + path;
+        if (path.length() == 0 || !path.substring(0, 1).equals("/")) {
+            path = "/" + path;
+        }
+        if (s.length() >= 8 && s.substring(0, 8).equals("https://")) {
+            return s + path;
+        } else if (
+            s.length() >= 7 &&
+            s.substring(0, 7).equals("http://")
+        ) {
+            return s + path;
+        }
+        return "https://" + s + path;
     }
 }

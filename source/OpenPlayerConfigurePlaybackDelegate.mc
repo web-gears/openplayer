@@ -30,6 +30,79 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 
+    function onTap(evt as WatchUi.ClickEvent) as Boolean {
+        var coords = evt.getCoordinates();
+        var tapY = coords[1];
+        var devSettings = System.getDeviceSettings();
+        var dc_w = devSettings.screenWidth;
+        var scaleRatio = dc_w / 240.0;
+        var isRound = devSettings.screenShape == System.SCREEN_SHAPE_ROUND;
+        var startY = ((isRound ? 62 : 48) * scaleRatio).toNumber();
+        var rowH = (25 * scaleRatio).toNumber();
+
+        if (_viewMode.equals("playlists")) {
+            var playlists = _view != null ? _view.getPlaylists() : [];
+            var visibleCount = 3;
+            var startIdx = _view != null ? _view.getSelectedIndex() : 0;
+            if (startIdx > playlists.size() - visibleCount) {
+                startIdx = playlists.size() - visibleCount;
+            }
+            if (startIdx < 0) {
+                startIdx = 0;
+            }
+
+            for (var i = 0; i < visibleCount && startIdx + i < playlists.size(); i++) {
+                var rowTop = startY + (i * rowH);
+                if (tapY >= rowTop && tapY <= rowTop + rowH) {
+                    var targetIdx = startIdx + i;
+                    if (_view != null) {
+                        _view.setSelectedIndex(targetIdx);
+                    }
+                    _storage.savePlaybackPlaylistSelection(targetIdx);
+                    return onSelect();
+                }
+            }
+            if (tapY < startY && startIdx > 0) {
+                return onPreviousPage();
+            } else if (tapY > startY + (visibleCount * rowH) && startIdx + visibleCount < playlists.size()) {
+                return onNextPage();
+            }
+        } else {
+            var filteredTracks = getFilteredTracks();
+            var visibleCount = 4;
+            var scrollOffset = _view != null ? _view.getScrollOffset() : 0;
+            var startIdx = scrollOffset;
+            if (startIdx > filteredTracks.size() - visibleCount) {
+                startIdx = filteredTracks.size() - visibleCount;
+            }
+            if (startIdx < 0) {
+                startIdx = 0;
+            }
+
+            for (var j = 0; j < visibleCount && startIdx + j < filteredTracks.size(); j++) {
+                var rowTop = startY + (j * rowH);
+                if (tapY >= rowTop && tapY <= rowTop + rowH) {
+                    var targetIdx = startIdx + j;
+                    if (_view != null) {
+                        _view.setTrackSelectedIndex(targetIdx);
+                    }
+                    _storage.savePlaybackTrackSelection(targetIdx);
+                    return onSelect();
+                }
+            }
+            var bottomAreaY = ((isRound ? 200 : 215) * scaleRatio).toNumber();
+            if (tapY >= bottomAreaY) {
+                return onBack();
+            }
+            if (tapY < startY && scrollOffset > 0) {
+                return onPreviousPage();
+            } else if (tapY > startY + (visibleCount * rowH) && startIdx + visibleCount < filteredTracks.size()) {
+                return onNextPage();
+            }
+        }
+        return false;
+    }
+
     function onBack() as Boolean {
         if (_viewMode.equals("tracks")) {
             _viewMode = "playlists";
@@ -156,24 +229,24 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         var menu = new WatchUi.ActionMenu(null);
         var playlistId = _view != null ? _view.getSelectedPlaylistId() : null;
         if (_storage.isConfigured()) {
-            menu.addItem(new WatchUi.ActionMenuItem({:label => "Sync playlists"}, "sync_playlists"));
+            menu.addItem(new WatchUi.ActionMenuItem({:label => WatchUi.loadResource($.Rez.Strings.labelSyncPlaylists) as String}, "sync_playlists"));
         }
-        menu.addItem(new WatchUi.ActionMenuItem({:label => "Settings"}, "settings"));
+        menu.addItem(new WatchUi.ActionMenuItem({:label => WatchUi.loadResource($.Rez.Strings.labelSettings) as String}, "settings"));
         menu.addItem(new WatchUi.ActionMenuItem({:label => getApp().getModeToggleLabel()}, "mode_toggle"));
         if (_viewMode.equals("playlists")) {
             if (playlistId != null) {
-                menu.addItem(new WatchUi.ActionMenuItem({:label => "Remove Playlist"}, "remove_playlist"));
+                menu.addItem(new WatchUi.ActionMenuItem({:label => WatchUi.loadResource($.Rez.Strings.labelRemovePlaylist) as String}, "remove_playlist"));
             }
         } else {
             var tracks = _storage.loadSyncedTracks();
             var viewIdx = _view != null ? _view.getTrackSelectedIndex() : 0;
             _storage.setOptionsTrackSelection(viewIdx);
             if (tracks.size() > 0 && viewIdx >= 0 && viewIdx < tracks.size()) {
-                menu.addItem(new WatchUi.ActionMenuItem({:label => "Remove Track"}, "remove_track"));
+                menu.addItem(new WatchUi.ActionMenuItem({:label => WatchUi.loadResource($.Rez.Strings.labelRemoveTrack) as String}, "remove_track"));
             }
         }
-        menu.addItem(new WatchUi.ActionMenuItem({:label => "About"}, "about"));
-        menu.addItem(new WatchUi.ActionMenuItem({:label => "Clear Downloads"}, "clear"));
+        menu.addItem(new WatchUi.ActionMenuItem({:label => WatchUi.loadResource($.Rez.Strings.labelAbout) as String}, "about"));
+        menu.addItem(new WatchUi.ActionMenuItem({:label => WatchUi.loadResource($.Rez.Strings.labelClearDownloads) as String}, "clear"));
         WatchUi.showActionMenu(menu, new PlaybackActionMenuDelegate(self));
         return true;
     }
@@ -209,7 +282,7 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
     function onConfirmClearDownloads() as Void {
         var storage = new StorageManager();
         storage.clearDownloads();
-        WatchUi.showToast("Downloads cleared", null);
+        WatchUi.showToast(WatchUi.loadResource($.Rez.Strings.toastDownloadsCleared) as String, null);
         WatchUi.requestUpdate();
     }
 
@@ -225,11 +298,13 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
                 var track = tracks[i] as JellyfinTrack;
                 if (track.playlistId == null || !track.playlistId.equals(playlistId)) {
                     remaining.add(track);
+                } else {
+                    _storage.deleteCachedItemByTitle(track.name);
                 }
             }
             _storage.saveSyncedTracks(remaining);
             _storage.setPendingRemovePlaylistId(null);
-            WatchUi.showToast("Playlist removed", null);
+            WatchUi.showToast(WatchUi.loadResource($.Rez.Strings.toastPlaylistRemoved) as String, null);
             if (_view != null) {
                 _view.loadData();
             }
@@ -238,25 +313,29 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
     }
 
     function onConfirmRemoveTrack() as Void {
-        var currentIdx = _storage.getOptionsTrackSelection();
-        var tracks = _storage.loadSyncedTracks();
-        if (currentIdx >= 0 && currentIdx < tracks.size()) {
-            var removedTrack = tracks[currentIdx] as JellyfinTrack;
-            _storage.deleteCachedItemByTitle(removedTrack.name);
+        var viewIdx = _storage.getOptionsTrackSelection();
+        var filteredTracks = getFilteredTracks();
+        if (viewIdx >= 0 && viewIdx < filteredTracks.size()) {
+            var targetTrack = filteredTracks[viewIdx] as JellyfinTrack;
+            _storage.deleteCachedItemByTitle(targetTrack.name);
+            var tracks = _storage.loadSyncedTracks();
             var remaining = [];
             for (var i = 0; i < tracks.size(); i++) {
-                if (i != currentIdx) {
-                    remaining.add(tracks[i]);
+                var t = tracks[i] as JellyfinTrack;
+                if (t.id != null && !t.id.equals(targetTrack.id)) {
+                    remaining.add(t);
                 }
             }
             _storage.saveSyncedTracks(remaining);
-            var newIdx = currentIdx;
-            if (newIdx >= remaining.size() && remaining.size() > 0) {
-                newIdx = remaining.size() - 1;
+            var newIdx = viewIdx;
+            if (newIdx >= filteredTracks.size() - 1 && filteredTracks.size() > 1) {
+                newIdx = filteredTracks.size() - 2;
+            } else if (filteredTracks.size() <= 1) {
+                newIdx = 0;
             }
             _storage.saveCurrentTrackIndex(newIdx);
             _storage.savePlaybackTrackSelection(newIdx);
-            WatchUi.showToast("Track removed", null);
+            WatchUi.showToast(WatchUi.loadResource($.Rez.Strings.toastTrackRemoved) as String, null);
             if (_view != null) {
                 _view.loadData();
             }
@@ -278,26 +357,26 @@ class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
         var playlistId = _view != null ? _view.getSelectedPlaylistId() : null;
 
         if (_storage.isConfigured()) {
-            options.add("Sync playlists");
+            options.add(WatchUi.loadResource($.Rez.Strings.labelSyncPlaylists) as String);
         }
-        options.add("Settings");
+        options.add(WatchUi.loadResource($.Rez.Strings.labelSettings) as String);
         options.add(getApp().getModeToggleLabel());
 
         if (_viewMode.equals("playlists")) {
             if (playlistId != null) {
-                options.add("Remove this Playlist");
+                options.add(WatchUi.loadResource($.Rez.Strings.labelRemovePlaylist) as String);
             }
         } else {
             var tracks = _storage.loadSyncedTracks();
             var viewIdx = _view != null ? _view.getTrackSelectedIndex() : 0;
             _storage.setOptionsTrackSelection(viewIdx);
             if (tracks.size() > 0 && viewIdx >= 0 && viewIdx < tracks.size()) {
-                options.add("Remove this Track");
+                options.add(WatchUi.loadResource($.Rez.Strings.labelRemoveTrack) as String);
             }
         }
 
-        options.add("About");
-        options.add("Clear All Downloads");
+        options.add(WatchUi.loadResource($.Rez.Strings.labelAbout) as String);
+        options.add(WatchUi.loadResource($.Rez.Strings.labelClearDownloads) as String);
 
         var optionsView = new OpenPlayerOptionsView();
         optionsView.setOptions(options);
@@ -335,7 +414,9 @@ class PlaybackActionMenuDelegate extends WatchUi.ActionMenuDelegate {
         } else if (id.equals("mode_toggle")) {
             getApp().toggleMode();
             WatchUi.showToast(
-                getApp().isPodcastMode() ? "Podcast mode" : "Music mode",
+                getApp().isPodcastMode()
+                    ? (WatchUi.loadResource($.Rez.Strings.toastPodcastMode) as String)
+                    : (WatchUi.loadResource($.Rez.Strings.toastMusicMode) as String),
                 null
             );
         } else if (id.equals("settings")) {
@@ -346,14 +427,14 @@ class PlaybackActionMenuDelegate extends WatchUi.ActionMenuDelegate {
                 WatchUi.SLIDE_IMMEDIATE
             );
         } else if (id.equals("remove_playlist")) {
-            var confirmView = new ConfirmActionView("Remove Playlist?");
+            var confirmView = new ConfirmActionView(WatchUi.loadResource($.Rez.Strings.promptRemovePlaylist) as String);
             WatchUi.pushView(
                 confirmView,
                 new ConfirmActionDelegate(confirmView, new Lang.Method(_delegate, :onConfirmRemovePlaylist)),
                 WatchUi.SLIDE_IMMEDIATE
             );
         } else if (id.equals("remove_track")) {
-            var confirmView = new ConfirmActionView("Remove Track?");
+            var confirmView = new ConfirmActionView(WatchUi.loadResource($.Rez.Strings.promptRemoveTrack) as String);
             WatchUi.pushView(
                 confirmView,
                 new ConfirmActionDelegate(confirmView, new Lang.Method(_delegate, :onConfirmRemoveTrack)),
@@ -367,7 +448,7 @@ class PlaybackActionMenuDelegate extends WatchUi.ActionMenuDelegate {
                 WatchUi.SLIDE_IMMEDIATE
             );
         } else if (id.equals("clear")) {
-            var confirmView = new ConfirmActionView("Clear all downloads?");
+            var confirmView = new ConfirmActionView(WatchUi.loadResource($.Rez.Strings.promptClearDownloads) as String);
             WatchUi.pushView(
                 confirmView,
                 new ConfirmActionDelegate(confirmView, new Lang.Method(_delegate, :onConfirmClearDownloads)),

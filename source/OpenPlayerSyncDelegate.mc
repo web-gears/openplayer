@@ -115,6 +115,22 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
             Communications.notifySyncComplete(null);
             return;
         }
+
+        while (_currentTrackIndex < _syncTracksQueue.size()) {
+            var candidate = _syncTracksQueue[_currentTrackIndex];
+            if (candidate == null || candidate["serverId"] == null) {
+                System.println("SYNC: skipping null track at " + _currentTrackIndex);
+                _currentTrackIndex++;
+                continue;
+            }
+            var dSize = getTrackValueNum(candidate, "downloadSize");
+            if (dSize != null && dSize > MAX_TRACK_SIZE_BYTES) {
+                System.println("SYNC: skipping oversized track " + dSize + " bytes");
+                _currentTrackIndex++;
+                continue;
+            }
+            break;
+        }
         
         if (_currentTrackIndex >= _syncTracksQueue.size()) {
             System.println("SYNC: all tracks downloaded, finalizing");
@@ -123,41 +139,25 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         }
 
         var cachedDict = _syncTracksQueue[_currentTrackIndex];
+        var progress = ((_currentTrackIndex.toFloat() / _syncTracksQueue.size()) * 100).toNumber();
+
+        _storage.saveSyncProgressDict({
+            "current" => _currentTrackIndex + 1,
+            "total" => _syncTracksQueue.size(),
+            "phase" => "downloading",
+            "percent" => progress
+        });
         
-        if (cachedDict != null && cachedDict["serverId"] != null) {
-            var downloadSize = getTrackValueNum(cachedDict, "downloadSize");
-            if (downloadSize != null && downloadSize > MAX_TRACK_SIZE_BYTES) {
-                System.println("SYNC: skipping oversized track " + downloadSize + " bytes");
-                skipCurrentTrack();
-                return;
-            }
-
-            var progress = ((_currentTrackIndex.toFloat() / _syncTracksQueue.size()) * 100).toNumber();
-
-            _storage.saveSyncProgressDict({
-                "current" => _currentTrackIndex + 1,
-                "total" => _syncTracksQueue.size(),
-                "phase" => "downloading",
-                "percent" => progress
-            });
-            
-            if (progress != _lastSentProgress && (progress % 5 == 0 || _currentTrackIndex == 0)) {
-                _lastSentProgress = progress;
-                Communications.notifySyncProgress(progress);
-            }
-            
-            var bitrate = 256000;
-            var dur = getTrackValueNum(cachedDict, "durationSeconds");
-            if (dur != null && dur > 1200) {
-                bitrate = 128000;
-            }
-            System.println("SYNC: downloading track " + (_currentTrackIndex + 1) + "/" + _syncTracksQueue.size() + " bitrate=" + bitrate);
-            _retryCount = 0;
-            _client.downloadAndSaveTrack(cachedDict["serverId"] as String, method(:onTrackDownloaded), bitrate);
-        } else {
-            System.println("SYNC: skipping null track at " + _currentTrackIndex);
-            skipCurrentTrack();
+        if (progress != _lastSentProgress && (progress % 5 == 0 || _currentTrackIndex == 0)) {
+            _lastSentProgress = progress;
+            Communications.notifySyncProgress(progress);
         }
+        
+        var dur = getTrackValueNum(cachedDict, "durationSeconds");
+        var bitrate = _storage.getPreferredBitrate(dur);
+        System.println("SYNC: downloading track " + (_currentTrackIndex + 1) + "/" + _syncTracksQueue.size() + " bitrate=" + bitrate);
+        _retryCount = 0;
+        _client.downloadAndSaveTrack(cachedDict["serverId"] as String, method(:onTrackDownloaded), bitrate);
     }
 
     private function skipCurrentTrack() as Void {
@@ -215,7 +215,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         return null;
     }
 
-    function onTrackDownloaded(responseCode as Number, data as Null or Dictionary or String or PersistedContent.Iterator) as Void {
+    function onTrackDownloaded(responseCode as Number, data as Object?) as Void {
         System.println("SYNC: onTrackDownloaded rc=" + responseCode + " track=" + _currentTrackIndex);
         if (responseCode != 200) {
             if (_retryCount < MAX_RETRY) {
@@ -223,7 +223,8 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
                 System.println("SYNC: retry " + _retryCount + "/" + MAX_RETRY + " for track " + _currentTrackIndex);
                 var cachedDict = _syncTracksQueue[_currentTrackIndex];
                 if (cachedDict != null && cachedDict["serverId"] != null) {
-                    var bitrate = 256000;
+                    var dur = getTrackValueNum(cachedDict, "durationSeconds");
+                    var bitrate = _storage.getPreferredBitrate(dur);
                     _client.downloadAndSaveTrack(cachedDict["serverId"] as String, method(:onTrackDownloaded), bitrate);
                     return;
                 }
@@ -243,20 +244,20 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
             var cachedDict = _syncTracksQueue[_currentTrackIndex];
             if (cachedDict != null) {
                 var trackId = cachedDict["id"] != null ? cachedDict["id"].toString() : null;
-                if (trackId != null && data instanceof Media.ContentRef) {
+                if (data instanceof Media.ContentRef) {
                     var cRef = data as Media.ContentRef;
                     var refId = cRef.getId();
-                    if (refId != null) {
+                    if (trackId != null && refId != null) {
                         Application.Storage.setValue("tr_" + trackId, refId.toString());
                     }
-                }
-                var contentObj = Media.getCachedContentObj(data as Media.ContentRef);
-                if (contentObj instanceof Media.Content) {
-                    var metadata = new Media.ContentMetadata();
-                    metadata.title = getTrackValue(cachedDict, "name");
-                    metadata.artist = getTrackValue(cachedDict, "artistName");
-                    metadata.album = getTrackValue(cachedDict, "albumName");
-                    contentObj.setMetadata(metadata);
+                    var contentObj = Media.getCachedContentObj(cRef);
+                    if (contentObj instanceof Media.Content) {
+                        var metadata = new Media.ContentMetadata();
+                        metadata.title = getTrackValue(cachedDict, "name");
+                        metadata.artist = getTrackValue(cachedDict, "artistName");
+                        metadata.album = getTrackValue(cachedDict, "albumName");
+                        contentObj.setMetadata(metadata);
+                    }
                 }
                 commitTrackToSyncedList(cachedDict);
             }
@@ -280,7 +281,7 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
         if (hasFailed) {
             var filtered = [];
             for (var i = 0; i < pendingTracks.size(); i++) {
-                var pt = pendingTracks[i] as Dictionary;
+                var pt = pendingTracks[i] as Dictionary?;
                 if (pt == null) { continue; }
                 var pid = pt["id"] != null ? pt["id"].toString() : "";
                 if (pid.length() > 0 && _failedTrackIds[pid] != null) { continue; }

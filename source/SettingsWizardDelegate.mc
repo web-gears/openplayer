@@ -63,6 +63,41 @@ class SettingsWizardDelegate extends WatchUi.BehaviorDelegate {
         return false;
     }
 
+    function onTap(evt as WatchUi.ClickEvent) as Lang.Boolean {
+        var step = _view.getStep();
+        var coords = evt.getCoordinates();
+        var tapY = coords[1];
+        var devSettings = System.getDeviceSettings();
+        var dc_h = devSettings.screenHeight;
+
+        if (step == STEP_CHOICE) {
+            if (tapY < dc_h / 2) {
+                startQrFlow();
+                return true;
+            } else {
+                _view.setStep(STEP_GCM_INFO);
+                return true;
+            }
+        } else if (step == STEP_DONE) {
+            return onSelect();
+        } else if (step == STEP_GCM_INFO) {
+            var bottomActionY = (dc_h * 0.75).toNumber();
+            if (tapY >= bottomActionY) {
+                return onBack();
+            }
+            return onSelect();
+        } else if (step == STEP_QR_DISPLAY) {
+            return onSelect();
+        } else if (step == STEP_REVIEW) {
+            var bottomBackY = (dc_h * 0.8).toNumber();
+            if (tapY >= bottomBackY) {
+                return onBack();
+            }
+            return onSelect();
+        }
+        return false;
+    }
+
     function onSelect() as Lang.Boolean {
         var step = _view.getStep();
         if (step == STEP_CHOICE) {

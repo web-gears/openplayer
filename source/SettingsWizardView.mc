@@ -46,30 +46,44 @@ class SettingsWizardView extends WatchUi.View {
         }
     }
 
+    private var _wrappedLines as Array = [];
+
     function onUpdate(dc as Dc) as Void {
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
         dc.clear();
 
         if (_isLoading) {
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 20), Graphics.FONT_MEDIUM, "Loading...", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 20), Graphics.FONT_MEDIUM, WatchUi.loadResource($.Rez.Strings.loadingMessage) as String, Graphics.TEXT_JUSTIFY_CENTER);
             return;
         }
 
-        dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 20), Graphics.FONT_MEDIUM, _title, Graphics.TEXT_JUSTIFY_CENTER);
-
-        var msgY = ScaleHelper.scale(dc, 55);
-        var lineH = ScaleHelper.scale(dc, 20);
-        var lines = wrapText(_message, dc.getWidth() - ScaleHelper.scale(dc, 20));
-        for (var i = 0; i < lines.size() && i < 3; i++) {
-            dc.drawText(dc.getWidth() / 2, msgY + i * lineH, Graphics.FONT_TINY, lines[i], Graphics.TEXT_JUSTIFY_CENTER);
+        var titleY = ScaleHelper.topSafe(dc, 12, 25);
+        var titleFont = Graphics.FONT_SMALL;
+        var maxTitleW = dc.getWidth() - (ScaleHelper.listSideSafe(dc) * 2);
+        if (dc.getTextWidthInPixels(_title, titleFont) > maxTitleW) {
+            titleFont = Graphics.FONT_TINY;
         }
+        var truncatedTitle = ScaleHelper.truncateText(dc, _title, titleFont, maxTitleW);
+        dc.drawText(dc.getWidth() / 2, titleY, titleFont, truncatedTitle, Graphics.TEXT_JUSTIFY_CENTER);
+
+        var msgY = ScaleHelper.topSafe(dc, 38, 52);
+        var msgFont = Graphics.FONT_TINY;
+        var maxMsgW = dc.getWidth() - ScaleHelper.scale(dc, ScaleHelper.isRound() ? 85 : 32);
+        _wrappedLines = ScaleHelper.wrapText(dc, _message, msgFont, maxMsgW);
+        var msgFontH = Graphics.getFontHeight(msgFont);
+        var msgLineH = msgFontH + ScaleHelper.scale(dc, 3);
+        for (var i = 0; i < _wrappedLines.size() && i < 3; i++) {
+            dc.drawText(dc.getWidth() / 2, msgY + i * msgLineH, msgFont, _wrappedLines[i] as String, Graphics.TEXT_JUSTIFY_CENTER);
+        }
+        var headerBottom = msgY + (_wrappedLines.size() > 0 ? (_wrappedLines.size() - 1) * msgLineH + msgFontH : 0);
 
         if (_step == STEP_CHOICE) {
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 10), Graphics.FONT_MEDIUM, "UP: QR code", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 25), Graphics.FONT_MEDIUM, "DOWN: phone app", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 10), Graphics.FONT_MEDIUM, WatchUi.loadResource($.Rez.Strings.wizardChoiceQr) as String, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 25), Graphics.FONT_MEDIUM, WatchUi.loadResource($.Rez.Strings.wizardChoiceGcm) as String, Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_QR_LOADING) {
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_MEDIUM, "Creating session...", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_MEDIUM, WatchUi.loadResource($.Rez.Strings.wizardQrLoading) as String, Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_QR_DISPLAY) {
+            var qrY = ScaleHelper.topSafe(dc, 68, 78);
             if (_qrCodeBitmap != null) {
                 if (Graphics has :AffineTransform && dc has :drawBitmap2) {
                     var origW = _qrCodeBitmap.getWidth().toFloat();
@@ -92,63 +106,95 @@ class SettingsWizardView extends WatchUi.View {
 
                     dc.drawBitmap2(
                         dc.getWidth() / 2 - ScaleHelper.scale(dc, 47), 
-                        ScaleHelper.scale(dc, 83), 
+                        qrY, 
                         _qrCodeBitmap, 
                         bitmapOptions
                     );
                 } else {
-                    dc.drawBitmap(dc.getWidth() / 2 - 47, 83, _qrCodeBitmap);
+                    dc.drawBitmap(dc.getWidth() / 2 - 47, qrY, _qrCodeBitmap);
                 }
 
-                dc.drawText(dc.getWidth() / 2,  dc.getHeight() - ScaleHelper.scale(dc, 60), Graphics.FONT_MEDIUM, formatSessionId(), Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2,  ScaleHelper.bottomSafe(dc, 45, 60), Graphics.FONT_MEDIUM, formatSessionId(), Graphics.TEXT_JUSTIFY_CENTER);
             } else {
-                dc.setColor(Graphics.COLOR_DK_GRAY, Graphics.COLOR_BLACK);
-                dc.drawRectangle(ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 45), dc.getWidth() - ScaleHelper.scale(dc, 100), ScaleHelper.scale(dc, 100));
+                dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+                dc.drawRectangle(ScaleHelper.scale(dc, 50), qrY, dc.getWidth() - ScaleHelper.scale(dc, 100), ScaleHelper.scale(dc, 100));
                 dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-                dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 90), Graphics.FONT_TINY, "[QR]", Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 155), Graphics.FONT_TINY, formatSessionId(), Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, qrY + ScaleHelper.scale(dc, 45), Graphics.FONT_TINY, "[QR]", Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 45, 60), Graphics.FONT_TINY, formatSessionId(), Graphics.TEXT_JUSTIFY_CENTER);
             }
             var mins = _remainingSeconds / 60;
             var secs = _remainingSeconds % 60;
             var timeStr = mins + ":" + (secs < 10 ? "0" + secs : secs.toString());
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 30), Graphics.FONT_XTINY, timeStr + " remaining", Graphics.TEXT_JUSTIFY_CENTER);
+            var remFormat = WatchUi.loadResource($.Rez.Strings.wizardTimeRemaining) as String;
+            var remText = Lang.format(remFormat, [timeStr]);
+            var legacyIdx = remText.find("{0}");
+            if (legacyIdx != null) {
+                remText = remText.substring(0, legacyIdx) + timeStr + remText.substring(legacyIdx + 3, remText.length());
+            }
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 20, 32), Graphics.FONT_XTINY, remText, Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_GCM_INFO) {
             var storage = new StorageManager();
             var server = storage.getServer();
             var username = storage.getUsername();
             if (server.length() > 0) {
-                dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 85), Graphics.FONT_TINY, server, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 110), Graphics.FONT_TINY, username, Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 65), Graphics.FONT_TINY, "ENTER: connect", Graphics.TEXT_JUSTIFY_CENTER);
+                var maxTextW = dc.getWidth() - (ScaleHelper.listSideSafe(dc) * 2);
+                var truncServer = ScaleHelper.truncateText(dc, server, Graphics.FONT_TINY, maxTextW);
+                var truncUser = ScaleHelper.truncateText(dc, username, Graphics.FONT_TINY, maxTextW);
+                dc.drawText(dc.getWidth() / 2, ScaleHelper.topSafe(dc, 70, 85), Graphics.FONT_TINY, truncServer, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, ScaleHelper.topSafe(dc, 95, 110), Graphics.FONT_TINY, truncUser, Graphics.TEXT_JUSTIFY_CENTER);
+                dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 45, 62), Graphics.FONT_XTINY, WatchUi.loadResource($.Rez.Strings.wizardGcmEnterConnect) as String, Graphics.TEXT_JUSTIFY_CENTER);
             } else {
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 30), Graphics.FONT_TINY, "Use Garmin Connect", Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 - ScaleHelper.scale(dc, 5), Graphics.FONT_TINY, "Mobile app to enter", Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 20), Graphics.FONT_TINY, "server URL and login", Graphics.TEXT_JUSTIFY_CENTER);
-                dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2 + ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: check settings", Graphics.TEXT_JUSTIFY_CENTER);
+                var bodyFont = Graphics.FONT_TINY;
+                var maxBodyW = dc.getWidth() - ScaleHelper.scale(dc, ScaleHelper.isRound() ? 50 : 24);
+                var gcmText = WatchUi.loadResource($.Rez.Strings.wizardGcmUseGcm) as String;
+                var gcmLines = ScaleHelper.wrapText(dc, gcmText, bodyFont, maxBodyW);
+                var bodyFontH = Graphics.getFontHeight(bodyFont);
+                var bodyLineH = bodyFontH + ScaleHelper.scale(dc, 4);
+                var totalBodyH = (gcmLines.size() - 1) * bodyLineH + bodyFontH;
+
+                var footerY = ScaleHelper.bottomSafe(dc, 45, 62);
+                var availableSpace = footerY - headerBottom;
+                if (totalBodyH > availableSpace && bodyFont != Graphics.FONT_XTINY) {
+                    bodyFont = Graphics.FONT_XTINY;
+                    bodyFontH = Graphics.getFontHeight(bodyFont);
+                    bodyLineH = bodyFontH + ScaleHelper.scale(dc, 3);
+                    gcmLines = ScaleHelper.wrapText(dc, gcmText, bodyFont, maxBodyW);
+                    totalBodyH = (gcmLines.size() - 1) * bodyLineH + bodyFontH;
+                }
+
+                var gcmStartY = headerBottom + (availableSpace - totalBodyH) / 2;
+                for (var k = 0; k < gcmLines.size(); k++) {
+                    dc.drawText(dc.getWidth() / 2, gcmStartY + k * bodyLineH, bodyFont, gcmLines[k] as String, Graphics.TEXT_JUSTIFY_CENTER);
+                }
+                dc.drawText(dc.getWidth() / 2, footerY, Graphics.FONT_XTINY, WatchUi.loadResource($.Rez.Strings.wizardGcmCheckSettings) as String, Graphics.TEXT_JUSTIFY_CENTER);
             }
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 40), Graphics.FONT_XTINY, "ESC: back", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 20, 35), Graphics.FONT_XTINY, WatchUi.loadResource($.Rez.Strings.wizardGcmEscBack) as String, Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_REVIEW) {
+            var maxValW = dc.getWidth() / 2 - ScaleHelper.scale(dc, 10);
+            var serverVal = ScaleHelper.truncateText(dc, _serverUrl, Graphics.FONT_TINY, maxValW);
+            var userVal = ScaleHelper.truncateText(dc, _username, Graphics.FONT_TINY, maxValW);
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 90), Graphics.FONT_TINY, "Server:", Graphics.TEXT_JUSTIFY_RIGHT);
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 90), Graphics.FONT_TINY, _serverUrl, Graphics.TEXT_JUSTIFY_LEFT);
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 115), Graphics.FONT_TINY, "User:", Graphics.TEXT_JUSTIFY_RIGHT);
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 115), Graphics.FONT_TINY, _username, Graphics.TEXT_JUSTIFY_LEFT);
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.scale(dc, 140), Graphics.FONT_TINY, "Pass:", Graphics.TEXT_JUSTIFY_RIGHT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.topSafe(dc, 75, 90), Graphics.FONT_TINY, WatchUi.loadResource($.Rez.Strings.wizardReviewServer) as String, Graphics.TEXT_JUSTIFY_RIGHT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.topSafe(dc, 75, 90), Graphics.FONT_TINY, serverVal, Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.topSafe(dc, 100, 115), Graphics.FONT_TINY, WatchUi.loadResource($.Rez.Strings.wizardReviewUser) as String, Graphics.TEXT_JUSTIFY_RIGHT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.topSafe(dc, 100, 115), Graphics.FONT_TINY, userVal, Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 50), ScaleHelper.topSafe(dc, 125, 140), Graphics.FONT_TINY, WatchUi.loadResource($.Rez.Strings.wizardReviewPass) as String, Graphics.TEXT_JUSTIFY_RIGHT);
             var masked = "---";
             if (_password.length() > 0) {
                 masked = "********";
             }
-            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.scale(dc, 140), Graphics.FONT_TINY, masked, Graphics.TEXT_JUSTIFY_LEFT);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: save\nBACK: back", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2 - ScaleHelper.scale(dc, 45), ScaleHelper.topSafe(dc, 125, 140), Graphics.FONT_TINY, masked, Graphics.TEXT_JUSTIFY_LEFT);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 30, 48), Graphics.FONT_XTINY, WatchUi.loadResource($.Rez.Strings.wizardReviewSave) as String, Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_DONE) {
             dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, ScaleHelper.scale(dc, 130), Graphics.FONT_MEDIUM, "[Start Sync]", Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 50), Graphics.FONT_XTINY, "ENTER: sync now\nBACK: later", Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.topSafe(dc, 110, 125), Graphics.FONT_SMALL, WatchUi.loadResource($.Rez.Strings.wizardDoneStartSync) as String, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 30, 48), Graphics.FONT_XTINY, WatchUi.loadResource($.Rez.Strings.wizardDoneSyncNow) as String, Graphics.TEXT_JUSTIFY_CENTER);
         }
 
         if (_errorMessage.length() > 0) {
             dc.setColor(Graphics.COLOR_RED, Graphics.COLOR_BLACK);
-            dc.drawText(dc.getWidth() / 2, dc.getHeight() - ScaleHelper.scale(dc, 60), Graphics.FONT_SYSTEM_XTINY, _errorMessage, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(dc.getWidth() / 2, ScaleHelper.bottomSafe(dc, 40, 58), Graphics.FONT_SYSTEM_XTINY, _errorMessage, Graphics.TEXT_JUSTIFY_CENTER);
         }
     }
 
@@ -172,6 +218,7 @@ class SettingsWizardView extends WatchUi.View {
 
     function setMessage(msg as String) as Void {
         _message = msg;
+        _wrappedLines = wrapText(_message, 200);
     }
 
     function setIsLoading(loading as Boolean) as Void {
@@ -244,26 +291,27 @@ class SettingsWizardView extends WatchUi.View {
         return _step == STEP_QR_DISPLAY && _remainingSeconds <= 0;
     }
 
-private function updateStep() as Void {
+    private function updateStep() as Void {
         if (_step == STEP_CHOICE) {
-            _title = "Setup";
-            _message = "Choose method";
+            _title = WatchUi.loadResource($.Rez.Strings.welcomeTitle) as String;
+            _message = WatchUi.loadResource($.Rez.Strings.welcomeMessage) as String;
         } else if (_step == STEP_QR_LOADING) {
-            _title = "QR Code";
-            _message = "Creating session...";
+            _title = WatchUi.loadResource($.Rez.Strings.wizardQrTitle) as String;
+            _message = WatchUi.loadResource($.Rez.Strings.wizardQrLoading) as String;
         } else if (_step == STEP_QR_DISPLAY) {
-            _title = "Scan QR Code";
-            _message = "ENTER: confirm";
+            _title = WatchUi.loadResource($.Rez.Strings.wizardQrTitle) as String;
+            _message = WatchUi.loadResource($.Rez.Strings.wizardQrConfirm) as String;
         } else if (_step == STEP_GCM_INFO) {
-            _title = "Phone App";
-            _message = "Configure in GCM";
+            _title = WatchUi.loadResource($.Rez.Strings.wizardGcmTitle) as String;
+            _message = WatchUi.loadResource($.Rez.Strings.wizardGcmConfigure) as String;
         } else if (_step == STEP_REVIEW) {
-            _title = "Review";
-            _message = "Ready to connect?";
+            _title = WatchUi.loadResource($.Rez.Strings.reviewTitle) as String;
+            _message = WatchUi.loadResource($.Rez.Strings.reviewMessage) as String;
         } else if (_step == STEP_DONE) {
-            _title = "Done";
-            _message = "Settings Saved";
+            _title = WatchUi.loadResource($.Rez.Strings.labelDone) as String;
+            _message = WatchUi.loadResource($.Rez.Strings.syncComplete) as String;
         }
+        _wrappedLines = wrapText(_message, 200);
     }
 
     private function formatSessionId() as String {
@@ -280,29 +328,6 @@ private function updateStep() as Void {
     }
 
     private function wrapText(text as String, maxWidth as Number) as Array {
-        var lines = [];
-        var words = ScaleHelper.splitString(text, " ");
-        var currentLine = "";
-
-        for (var i = 0; i < words.size(); i++) {
-            var word = words[i];
-            if (currentLine.length() + word.length() + 1 > 30) {
-                if (currentLine.length() > 0) {
-                    lines.add(currentLine);
-                }
-                currentLine = word;
-            } else {
-                if (currentLine.length() > 0) {
-                    currentLine = currentLine + " ";
-                }
-                currentLine = currentLine + word;
-            }
-        }
-
-        if (currentLine.length() > 0) {
-            lines.add(currentLine);
-        }
-
-        return lines;
+        return ScaleHelper.wrapText(null, text, null, maxWidth);
     }
 }
