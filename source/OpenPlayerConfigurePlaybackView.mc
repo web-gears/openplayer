@@ -88,9 +88,18 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
         var unique = [];
         var seenIds = [];
         
+        var hasTrackChanges = false;
         for (var i = 0; i < _tracks.size(); i++) {
             var track = _tracks[i] as JellyfinTrack;
             var pid = track.playlistId;
+            if (pid != null && (pid.equals("0") || pid.length() < 4)) {
+                if (savedPlaylists.size() > 0) {
+                    var sp0 = savedPlaylists[0] as JellyfinPlaylist;
+                    pid = sp0.id;
+                    track.playlistId = pid;
+                    hasTrackChanges = true;
+                }
+            }
             if (pid != null && pid.length() > 0) {
                 var alreadySeen = false;
                 for (var j = 0; j < seenIds.size(); j++) {
@@ -101,7 +110,10 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
                 }
                 if (!alreadySeen) {
                     seenIds.add(pid);
-                    var playlistName = "P-" + pid.substring(0, 8);
+                    var playlistName = "Playlist";
+                    if (pid.length() >= 8) {
+                        playlistName = "P-" + pid.substring(0, 8);
+                    }
                     for (var k = 0; k < savedPlaylists.size(); k++) {
                         var sp = savedPlaylists[k] as JellyfinPlaylist;
                         if (sp.id.equals(pid)) {
@@ -115,6 +127,9 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
                     });
                 }
             }
+        }
+        if (hasTrackChanges) {
+            storage.saveSyncedTracks(_tracks);
         }
         _playlists = unique;
 

@@ -1,6 +1,7 @@
 import Toybox.Test;
 import Toybox.WatchUi;
 import Toybox.Lang;
+import Toybox.Application;
 
 (:test)
 class MockConfirmActionCallback {
@@ -103,6 +104,62 @@ class DelegateFlowTests {
 
         syncState.togglePlaylist("pl_2");
         Test.assertEqualMessage(syncState.isPlaylistSelected("pl_2"), false, "Playlist pl_2 should not be selected after toggle off");
+
+        return true;
+    }
+
+    // Tier 2: Test track deserialization robustness when titles contain pipe characters
+    (:test)
+    static function testTrackDeserializationWithPipes(logger as Test.Logger) as Boolean {
+        var storage = new StorageManager();
+        var playlistUuid = "abcdef1234567890abcdef1234567890";
+
+        // Construct 2 tracks: 1 standard, 1 with a pipe in title
+        // Format: id|serverId|name|albumName|artistName|durationSeconds|downloadSize|playlistId
+        var standardRecord = "trk1|srv1|Normal Episode|Podcast Album|Artist Name|180|1024|" + playlistUuid;
+        var pipedRecord = "trk2|srv2|Show #42 | Special Guest Interview|Podcast Album|Artist Name|240|2048|" + playlistUuid;
+
+        var encoded = standardRecord + "\n" + pipedRecord;
+        Application.Storage.setValue("synced_tracks_str", encoded);
+
+        var tracks = storage.loadSyncedTracks();
+        Test.assertEqualMessage(tracks.size(), 2, "Expected 2 tracks loaded");
+
+        var t1 = tracks[0] as JellyfinTrack;
+        Test.assertEqualMessage(t1.name, "Normal Episode", "Track 1 name mismatch");
+        Test.assertEqualMessage(t1.durationSeconds, 180, "Track 1 duration mismatch");
+        Test.assertEqualMessage(t1.downloadSize, 1024, "Track 1 size mismatch");
+        Test.assertEqualMessage(t1.playlistId, playlistUuid, "Track 1 playlistId mismatch");
+
+        var t2 = tracks[1] as JellyfinTrack;
+        Test.assertEqualMessage(t2.name, "Show #42 Special Guest Interview", "Track 2 name mismatch");
+        Test.assertEqualMessage(t2.durationSeconds, 240, "Track 2 duration mismatch");
+        Test.assertEqualMessage(t2.downloadSize, 2048, "Track 2 size mismatch");
+        Test.assertEqualMessage(t2.playlistId, playlistUuid, "Track 2 playlistId should be playlist UUID, not 0");
+
+        return true;
+    }
+
+    // Tier 2: Test auto-healing of legacy corrupted '0' playlist IDs
+    (:test)
+    static function testCorruptedPlaylistIdHealing(logger as Test.Logger) as Boolean {
+        var storage = new StorageManager();
+        var playlistUuid = "podcasts_uuid_12345";
+
+        // Save active sync state with known playlist ID
+        var syncState = new SyncState();
+        syncState.addPlaylist(playlistUuid);
+        storage.saveSyncState(syncState);
+
+        // Corrupted track where playlistId was baked as "0"
+        var corruptedRecord = "trk_corrupt|srv_c|Corrupted Title|Album|Artist|300|4096|0";
+        Application.Storage.setValue("synced_tracks_str", corruptedRecord);
+
+        var tracks = storage.loadSyncedTracks();
+        Test.assertEqualMessage(tracks.size(), 1, "Expected 1 track loaded");
+
+        var t = tracks[0] as JellyfinTrack;
+        Test.assertEqualMessage(t.playlistId, playlistUuid, "Corrupted playlistId '0' should be auto-healed to active playlist UUID");
 
         return true;
     }

@@ -190,7 +190,7 @@ class StorageManager {
         for (var i = 0; i < playlists.size(); i++) {
             var p = playlists[i];
             parts.add(
-                p.id + TRACK_DELIM + p.name + TRACK_DELIM + p.trackCount.toString()
+                p.id + TRACK_DELIM + sanitizeField(p.name) + TRACK_DELIM + p.trackCount.toString()
             );
         }
         var encoded = "";
@@ -628,9 +628,31 @@ class StorageManager {
                     var trackName = fields[2];
                     var trackAlbum = fields[3];
                     var trackArtist = fields[4];
-                    var trackDuration = fields[5].toNumber();
-                    var trackSize = fields[6].toNumber();
-                    var trackPlaylistId = fields[7];
+                    var trackDuration = fields[fields.size() - 3].toNumber();
+                    var trackSize = fields[fields.size() - 2].toNumber();
+                    var trackPlaylistId = fields[fields.size() - 1];
+
+                    if (fields.size() > 8) {
+                        trackName = "";
+                        for (var f = 2; f <= fields.size() - 6; f++) {
+                            if (f > 2) { trackName = trackName + " "; }
+                            trackName = trackName + fields[f];
+                        }
+                        trackAlbum = fields[fields.size() - 5];
+                        trackArtist = fields[fields.size() - 4];
+                    }
+
+                    if (trackPlaylistId != null && (trackPlaylistId.equals("0") || trackPlaylistId.length() < 4)) {
+                        var state = loadSyncState();
+                        if (state != null && state.selectedPlaylistIds.size() > 0) {
+                            trackPlaylistId = state.selectedPlaylistIds[0] as String;
+                        } else {
+                            var cachedP = loadPlaylists();
+                            if (cachedP != null && cachedP.size() > 0) {
+                                trackPlaylistId = (cachedP[0] as JellyfinPlaylist).id;
+                            }
+                        }
+                    }
 
                     if (trackServerId.length() > 0 && trackName.length() > 0) {
                         var trackId = idStr;
@@ -681,8 +703,8 @@ class StorageManager {
             }
 
             parts.add(
-                id + TRACK_DELIM + serverId + TRACK_DELIM + name +
-                TRACK_DELIM + albumName + TRACK_DELIM + artistName +
+                id + TRACK_DELIM + serverId + TRACK_DELIM + sanitizeField(name) +
+                TRACK_DELIM + sanitizeField(albumName) + TRACK_DELIM + sanitizeField(artistName) +
                 TRACK_DELIM + durationSeconds + TRACK_DELIM + downloadSize +
                 TRACK_DELIM + playlistId
             );
@@ -710,15 +732,32 @@ class StorageManager {
             for (var i = 0; i < records.size(); i++) {
                 var fields = ScaleHelper.splitString(records[i], TRACK_DELIM);
                 if (fields.size() >= 8) {
+                    var qName = fields[2];
+                    var qAlbum = fields[3];
+                    var qArtist = fields[4];
+                    var qDuration = fields[fields.size() - 3].toNumber();
+                    var qSize = fields[fields.size() - 2].toNumber();
+                    var qPlaylistId = fields[fields.size() - 1];
+
+                    if (fields.size() > 8) {
+                        qName = "";
+                        for (var f = 2; f <= fields.size() - 6; f++) {
+                            if (f > 2) { qName = qName + " "; }
+                            qName = qName + fields[f];
+                        }
+                        qAlbum = fields[fields.size() - 5];
+                        qArtist = fields[fields.size() - 4];
+                    }
+
                     queue.add({
                         "id" => fields[0],
                         "serverId" => fields[1],
-                        "name" => fields[2],
-                        "albumName" => fields[3],
-                        "artistName" => fields[4],
-                        "durationSeconds" => fields[5].toNumber(),
-                        "downloadSize" => fields[6].toNumber(),
-                        "playlistId" => fields[7],
+                        "name" => qName,
+                        "albumName" => qAlbum,
+                        "artistName" => qArtist,
+                        "durationSeconds" => qDuration,
+                        "downloadSize" => qSize,
+                        "playlistId" => qPlaylistId,
                     });
                 }
             }
@@ -853,9 +892,9 @@ class StorageManager {
             parts.add(
                 id.toString() +
                 TRACK_DELIM + (serverId != null ? serverId : "") +
-                TRACK_DELIM + (name != null ? name : "") +
-                TRACK_DELIM + (albumName != null ? albumName : "") +
-                TRACK_DELIM + (artistName != null ? artistName : "") +
+                TRACK_DELIM + sanitizeField(name) +
+                TRACK_DELIM + sanitizeField(albumName) +
+                TRACK_DELIM + sanitizeField(artistName) +
                 TRACK_DELIM + durationSeconds.toString() +
                 TRACK_DELIM + downloadSize.toString() +
                 TRACK_DELIM + (playlistId != null ? playlistId : "")
@@ -887,9 +926,26 @@ class StorageManager {
                         var trackName = fields[2];
                         var trackAlbum = fields[3];
                         var trackArtist = fields[4];
-                        var trackDuration = fields[5].toNumber();
-                        var trackSize = fields[6].toNumber();
-                        var trackPlaylistId = fields[7];
+                        var trackDuration = fields[fields.size() - 3].toNumber();
+                        var trackSize = fields[fields.size() - 2].toNumber();
+                        var trackPlaylistId = fields[fields.size() - 1];
+
+                        if (fields.size() > 8) {
+                            trackName = "";
+                            for (var f = 2; f <= fields.size() - 6; f++) {
+                                if (f > 2) { trackName = trackName + " "; }
+                                trackName = trackName + fields[f];
+                            }
+                            trackAlbum = fields[fields.size() - 5];
+                            trackArtist = fields[fields.size() - 4];
+                        }
+
+                        if (trackPlaylistId != null && (trackPlaylistId.equals("0") || trackPlaylistId.length() < 4)) {
+                            var state = loadSyncState();
+                            if (state != null && state.selectedPlaylistIds.size() > 0) {
+                                trackPlaylistId = state.selectedPlaylistIds[0] as String;
+                            }
+                        }
                         if (trackServerId.length() > 0 && trackName.length() > 0) {
                             tracks.add({
                                 "id" => idStr,
