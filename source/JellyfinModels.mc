@@ -5,10 +5,10 @@ class JellyfinPlaylist {
     var name as String;
     var trackCount as Number;
 
-    function initialize(id as String, name as String, trackCount as Number) {
-        self.id = id;
-        self.name = name;
-        self.trackCount = trackCount;
+    function initialize(id as String?, name as String?, trackCount as Number?) {
+        self.id = id != null ? id : "";
+        self.name = name != null ? name : "";
+        self.trackCount = trackCount != null ? trackCount : 0;
     }
 }
 
@@ -24,22 +24,22 @@ class JellyfinTrack {
 
     function initialize(
         id,
-        serverId as String,
-        name as String,
-        albumName as String,
-        artistName as String,
-        durationSeconds as Number,
-        downloadSize as Number,
-        playlistId as String
+        serverId as String?,
+        name as String?,
+        albumName as String?,
+        artistName as String?,
+        durationSeconds as Number?,
+        downloadSize as Number?,
+        playlistId as String?
     ) {
-        self.id = id;
-        self.serverId = serverId;
-        self.name = name;
-        self.albumName = albumName;
-        self.artistName = artistName;
-        self.durationSeconds = durationSeconds;
-        self.downloadSize = downloadSize;
-        self.playlistId = playlistId;
+        self.id = id != null ? id : "";
+        self.serverId = serverId != null ? serverId : "";
+        self.name = name != null ? name : "";
+        self.albumName = albumName != null ? albumName : "Unknown Album";
+        self.artistName = artistName != null ? artistName : "Unknown Artist";
+        self.durationSeconds = durationSeconds != null ? durationSeconds : 0;
+        self.downloadSize = downloadSize != null ? downloadSize : 0;
+        self.playlistId = playlistId != null ? playlistId : "";
     }
 }
 
@@ -52,32 +52,37 @@ class SyncState {
         selectedPlaylistIds = [];
     }
 
-    function addPlaylist(id as String) as Void {
-        if (!isPlaylistSelected(id)) {
+    function addPlaylist(id as String?) as Void {
+        if (id != null && !isPlaylistSelected(id)) {
             selectedPlaylistIds.add(id);
         }
     }
 
-    function removePlaylist(id as String) as Void {
+    function removePlaylist(id as String?) as Void {
+        if (id == null) { return; }
         var newList = [];
         for (var i = 0; i < selectedPlaylistIds.size(); i++) {
-            if (!(selectedPlaylistIds[i] as String).equals(id)) {
-                newList.add(selectedPlaylistIds[i]);
+            var item = selectedPlaylistIds[i];
+            if (item != null && !item.toString().equals(id)) {
+                newList.add(item);
             }
         }
         selectedPlaylistIds = newList;
     }
 
-    function isPlaylistSelected(id as String) as Boolean {
+    function isPlaylistSelected(id as String?) as Boolean {
+        if (id == null) { return false; }
         for (var i = 0; i < selectedPlaylistIds.size(); i++) {
-            if ((selectedPlaylistIds[i] as String).equals(id)) {
+            var item = selectedPlaylistIds[i];
+            if (item != null && item.toString().equals(id)) {
                 return true;
             }
         }
         return false;
     }
 
-    function togglePlaylist(id as String) as Void {
+    function togglePlaylist(id as String?) as Void {
+        if (id == null) { return; }
         if (isPlaylistSelected(id)) {
             removePlaylist(id);
         } else {

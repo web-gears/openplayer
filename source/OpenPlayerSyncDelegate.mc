@@ -173,13 +173,23 @@ class OpenPlayerSyncDelegate extends Communications.SyncDelegate {
             var t = synced[i] as JellyfinTrack;
             if (t != null && t.id != null && t.id.toString().equals(trackId)) {
                 exists = true;
+                var pid = track["playlistId"] as String?;
+                if (pid != null && pid.length() > 0) {
+                    t.playlistId = pid;
+                }
+                var name = track["name"] as String?;
+                if (name != null) { t.name = name; }
+                var album = track["albumName"] as String?;
+                if (album != null) { t.albumName = album; }
+                var artist = track["artistName"] as String?;
+                if (artist != null) { t.artistName = artist; }
                 break;
             }
         }
         if (!exists) {
             synced.add(track);
-            _storage.saveSyncedTracks(synced);
         }
+        _storage.saveSyncedTracks(synced);
         System.println("SYNC: committed to synced list, total=" + synced.size());
     }
 

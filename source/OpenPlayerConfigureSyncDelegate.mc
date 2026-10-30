@@ -1062,8 +1062,12 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
 
     function onKey(evt as WatchUi.KeyEvent) as Boolean {
         var key = evt.getKey();
-        if (key == WatchUi.KEY_ENTER) { return onSelect(); }
-        if (key == WatchUi.KEY_ESC) { return onBack(); }
+        if (key == WatchUi.KEY_ENTER || key == 4 || (WatchUi has :KEY_START && key == WatchUi.KEY_START)) {
+            return onSelect();
+        }
+        if (key == WatchUi.KEY_ESC || key == WatchUi.KEY_LAP || key == 5) {
+            return onBack();
+        }
         return false;
     }
 
@@ -1076,23 +1080,24 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
                 if (et != null && et == 0) {
                     var syncState = _storage.loadSyncState();
                     var pending = _storage.loadPendingSyncTracks();
-                    _storage.reconcileSyncedTracks(pending, syncState.selectedPlaylistIds);
+                    if (pending.size() > 0) {
+                        _storage.reconcileSyncedTracks(pending, syncState.selectedPlaylistIds);
+                    }
                     _storage.clearPendingSyncTracks();
-                    _storage.saveSyncProgressDict({
-                        "phase" => "complete",
-                        "current" => 0,
-                        "total" => 0,
-                        "percent" => 100
-                    });
+                    _storage.clearSyncProgress();
+                    WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
+                    WatchUi.showToast("All tracks up to date", null);
                     return true;
                 }
                 _storage.saveSyncProgressDict({
                     "phase" => "starting"
                 });
                 Communications.startSync();
+                WatchUi.requestUpdate();
                 return true;
             }
             if (phase != null && (phase.equals("complete") || phase.equals("cancelled") || phase.equals("fetch_failed"))) {
+                _storage.clearPendingSyncTracks();
                 _storage.clearSyncProgress();
                 WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
                 return true;
@@ -1106,6 +1111,7 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
         if (progress != null) {
             var phase = progress["phase"] as String?;
             if (phase == null || phase.equals("confirm") || phase.equals("fetch_failed")) {
+                _storage.clearPendingSyncTracks();
                 _storage.clearSyncProgress();
                 WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
                 return true;
@@ -1114,6 +1120,7 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
                 _storage.saveCancelRequested(true);
             }
         }
+        _storage.clearPendingSyncTracks();
         _storage.clearSyncProgress();
         WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
         return true;

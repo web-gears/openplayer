@@ -101,8 +101,14 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
                     var playlistId = idArray[i] as String;
                     var trackCount = 0;
                     for (var j = 0; j < syncTracks.size(); j++) {
-                        var t = syncTracks[j] as JellyfinTrack;
-                        if (t.playlistId != null && t.playlistId.equals(playlistId)) {
+                        var item = syncTracks[j];
+                        var tPid = null as String?;
+                        if (item instanceof JellyfinTrack) {
+                            tPid = (item as JellyfinTrack).playlistId;
+                        } else if (item instanceof Dictionary) {
+                            tPid = (item as Dictionary)["playlistId"] as String?;
+                        }
+                        if (tPid != null && tPid.equals(playlistId)) {
                             trackCount++;
                         }
                     }
@@ -313,10 +319,11 @@ class OpenPlayerConfigureSyncView extends WatchUi.View {
         return syncState.isPlaylistSelected(id);
     }
 
-    function addToSelection(id as String) as Void {
+    function addToSelection(id as String?) as Void {
+        if (id == null) { return; }
         for (var i = 0; i < _playlists.size(); i++) {
             var playlist = _playlists[i] as JellyfinPlaylist;
-            if (playlist != null && playlist.id.equals(id)) {
+            if (playlist != null && playlist.id != null && playlist.id.equals(id)) {
                 _selectedIndices.add(i);
                 return;
             }

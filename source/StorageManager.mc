@@ -208,18 +208,23 @@ class StorageManager {
         if (raw instanceof Array) {
             var data = raw as Array;
             for (var i = 0; i < data.size(); i++) {
-                var item = data[i] as Dictionary;
-                var id = item["Id"] as String?;
-                var name = item["Name"] as String?;
-                var count = item["trackCount"] as Number?;
-                if (id != null && name != null) {
-                    result.add(
-                        new JellyfinPlaylist(
-                            id,
-                            name,
-                            count != null ? count : 0
-                        )
-                    );
+                var item = data[i];
+                if (item instanceof JellyfinPlaylist) {
+                    result.add(item);
+                } else if (item instanceof Dictionary) {
+                    var dict = item as Dictionary;
+                    var id = dict["Id"] != null ? dict["Id"] as String? : (dict["id"] != null ? dict["id"] as String? : null);
+                    var name = dict["Name"] != null ? dict["Name"] as String? : (dict["name"] != null ? dict["name"] as String? : null);
+                    var count = dict["trackCount"] as Number?;
+                    if (id != null && name != null) {
+                        result.add(
+                            new JellyfinPlaylist(
+                                id,
+                                name,
+                                count != null ? count : 0
+                            )
+                        );
+                    }
                 }
             }
         } else if (raw instanceof String) {
@@ -227,15 +232,30 @@ class StorageManager {
             if (encoded.length() > 0) {
                 var records = ScaleHelper.splitString(encoded, RECORD_DELIM);
                 for (var i = 0; i < records.size(); i++) {
-                    var fields = ScaleHelper.splitString(records[i], TRACK_DELIM);
-                    if (fields.size() >= 3) {
-                        result.add(
-                            new JellyfinPlaylist(
-                                fields[0],
-                                fields[1],
-                                fields[2].toNumber()
-                            )
-                        );
+                    var rec = records[i];
+                    if (rec == null || rec.length() == 0) { continue; }
+                    var fields = ScaleHelper.splitString(rec, TRACK_DELIM);
+                    if (fields.size() >= 2) {
+                        var pId = fields[0];
+                        var pCount = 0;
+                        var pName = "";
+                        if (fields.size() == 2) {
+                            pName = fields[1];
+                        } else if (fields.size() == 3) {
+                            pName = fields[1];
+                            var cnt = fields[2].toNumber();
+                            pCount = cnt != null ? cnt : 0;
+                        } else {
+                            var cnt = fields[fields.size() - 1].toNumber();
+                            pCount = cnt != null ? cnt : 0;
+                            for (var f = 1; f < fields.size() - 1; f++) {
+                                if (f > 1) { pName = pName + " "; }
+                                pName = pName + fields[f];
+                            }
+                        }
+                        if (pId != null && pId.length() > 0) {
+                            result.add(new JellyfinPlaylist(pId, pName, pCount));
+                        }
                     }
                 }
             }
@@ -270,8 +290,10 @@ class StorageManager {
                             state.selectedPlaylistIds.add(idParts[i]);
                         }
                     }
-                    state.lastSyncTimestamp = records[1].toNumber();
-                    state.totalSizeBytes = records[2].toNumber();
+                    var ts = records[1].toNumber();
+                    if (ts != null) { state.lastSyncTimestamp = ts; }
+                    var sz = records[2].toNumber();
+                    if (sz != null) { state.totalSizeBytes = sz; }
                 }
             }
         }
@@ -519,12 +541,13 @@ class StorageManager {
 
     private function sanitizeField(str as String?) as String {
         if (str == null) { return ""; }
+        if (str.find("|") == null && str.find("\n") == null && str.find("\r") == null) {
+            return str;
+        }
         var res = "";
         for (var i = 0; i < str.length(); i++) {
             var ch = str.substring(i, i + 1);
-            if (ch.equals("|")) {
-                res = res + " ";
-            } else if (ch.equals("\n") || ch.equals("\r")) {
+            if (ch.equals("|") || ch.equals("\n") || ch.equals("\r")) {
                 res = res + " ";
             } else {
                 res = res + ch;
@@ -537,47 +560,9 @@ class StorageManager {
         var parts = [];
         for (var i = 0; i < tracks.size(); i++) {
             var t = tracks[i];
-            var id = "";
-            var serverId = "";
-            var name = "";
-            var albumName = "";
-            var artistName = "";
-            var durationSeconds = 0;
-            var downloadSize = 0;
-            var playlistId = "";
-
-            if (t instanceof Dictionary) {
-                var dict = t as Dictionary;
-                id = dict["id"] as String?;
-                serverId = dict["serverId"] as String?;
-                name = dict["name"] as String?;
-                albumName = dict["albumName"] as String?;
-                artistName = dict["artistName"] as String?;
-                durationSeconds = dict["durationSeconds"] as Number?;
-                downloadSize = dict["downloadSize"] as Number?;
-                playlistId = dict["playlistId"] as String?;
-            } else if (t instanceof JellyfinTrack) {
-                var track = t as JellyfinTrack;
-                id = track.id;
-                serverId = track.serverId;
-                name = track.name;
-                albumName = track.albumName;
-                artistName = track.artistName;
-                durationSeconds = track.durationSeconds;
-                downloadSize = track.downloadSize;
-                playlistId = track.playlistId;
+            if (t != null) {
+                parts.add(encodeTrack(t));
             }
-
-            parts.add(
-                id.toString() +
-                TRACK_DELIM + (serverId != null ? serverId : "") +
-                TRACK_DELIM + sanitizeField(name) +
-                TRACK_DELIM + sanitizeField(albumName) +
-                TRACK_DELIM + sanitizeField(artistName) +
-                TRACK_DELIM + durationSeconds.toString() +
-                TRACK_DELIM + downloadSize.toString() +
-                TRACK_DELIM + (playlistId != null ? playlistId : "")
-            );
         }
 
         var encoded = "";
@@ -613,66 +598,103 @@ class StorageManager {
         var raw = Storage.getValue("synced_tracks_str");
 
         if (raw instanceof Array) {
-            return raw as Array;
+            var arr = raw as Array;
+            for (var i = 0; i < arr.size(); i++) {
+                var item = arr[i];
+                if (item instanceof JellyfinTrack) {
+                    tracks.add(item);
+                } else if (item instanceof Dictionary) {
+                    var dict = item as Dictionary;
+                    tracks.add(new JellyfinTrack(
+                        dict["id"],
+                        dict["serverId"] != null ? dict["serverId"].toString() : "",
+                        dict["name"] != null ? dict["name"].toString() : "",
+                        dict["albumName"] != null ? dict["albumName"].toString() : "Unknown Album",
+                        dict["artistName"] != null ? dict["artistName"].toString() : "Unknown Artist",
+                        dict["durationSeconds"] != null ? (dict["durationSeconds"] as Number) : 0,
+                        dict["downloadSize"] != null ? (dict["downloadSize"] as Number) : 0,
+                        dict["playlistId"] != null ? dict["playlistId"].toString() : ""
+                    ));
+                }
+            }
+            return tracks;
         }
 
         if (raw instanceof String) {
             var encoded = raw as String;
             if (encoded.length() > 0) {
-            var records = ScaleHelper.splitString(encoded, RECORD_DELIM);
-            for (var i = 0; i < records.size(); i++) {
-                var fields = ScaleHelper.splitString(records[i], TRACK_DELIM);
-                if (fields.size() >= 8) {
-                    var idStr = fields[0];
-                    var trackServerId = fields[1];
-                    var trackName = fields[2];
-                    var trackAlbum = fields[3];
-                    var trackArtist = fields[4];
-                    var trackDuration = fields[fields.size() - 3].toNumber();
-                    var trackSize = fields[fields.size() - 2].toNumber();
-                    var trackPlaylistId = fields[fields.size() - 1];
+                var records = ScaleHelper.splitString(encoded, RECORD_DELIM);
+                for (var i = 0; i < records.size(); i++) {
+                    var rec = records[i];
+                    if (rec == null || rec.length() == 0) { continue; }
+                    var fields = ScaleHelper.splitString(rec, TRACK_DELIM);
+                    if (fields.size() >= 6) {
+                        var idStr = fields[0];
+                        var trackServerId = fields[1];
+                        var trackName = fields[2];
+                        var trackAlbum = "Unknown Album";
+                        var trackArtist = "Unknown Artist";
+                        var trackDuration = 0;
+                        var trackSize = 0;
+                        var trackPlaylistId = "";
 
-                    if (fields.size() > 8) {
-                        trackName = "";
-                        for (var f = 2; f <= fields.size() - 6; f++) {
-                            if (f > 2) { trackName = trackName + " "; }
-                            trackName = trackName + fields[f];
-                        }
-                        trackAlbum = fields[fields.size() - 5];
-                        trackArtist = fields[fields.size() - 4];
-                    }
-
-                    if (trackPlaylistId != null && (trackPlaylistId.equals("0") || trackPlaylistId.length() < 4)) {
-                        var state = loadSyncState();
-                        if (state != null && state.selectedPlaylistIds.size() > 0) {
-                            trackPlaylistId = state.selectedPlaylistIds[0] as String;
-                        } else {
-                            var cachedP = loadPlaylists();
-                            if (cachedP != null && cachedP.size() > 0) {
-                                trackPlaylistId = (cachedP[0] as JellyfinPlaylist).id;
+                        if (fields.size() == 8) {
+                            trackAlbum = fields[3];
+                            trackArtist = fields[4];
+                            var dur = fields[5].toNumber();
+                            trackDuration = dur != null ? dur : 0;
+                            var sz = fields[6].toNumber();
+                            trackSize = sz != null ? sz : 0;
+                            trackPlaylistId = fields[7];
+                        } else if (fields.size() > 8) {
+                            var dur = fields[fields.size() - 3].toNumber();
+                            trackDuration = dur != null ? dur : 0;
+                            var sz = fields[fields.size() - 2].toNumber();
+                            trackSize = sz != null ? sz : 0;
+                            trackPlaylistId = fields[fields.size() - 1];
+                            trackAlbum = fields[fields.size() - 5];
+                            trackArtist = fields[fields.size() - 4];
+                            trackName = "";
+                            for (var f = 2; f <= fields.size() - 6; f++) {
+                                if (f > 2) { trackName = trackName + " "; }
+                                trackName = trackName + fields[f];
                             }
+                        } else if (fields.size() == 7) {
+                            trackAlbum = fields[3];
+                            trackArtist = fields[4];
+                            var dur = fields[5].toNumber();
+                            trackDuration = dur != null ? dur : 0;
+                            var sz = fields[6].toNumber();
+                            trackSize = sz != null ? sz : 0;
+                        } else if (fields.size() == 6) {
+                            trackAlbum = fields[3];
+                            trackArtist = fields[4];
+                            var dur = fields[5].toNumber();
+                            trackDuration = dur != null ? dur : 0;
                         }
-                    }
 
-                    if (trackServerId.length() > 0 && trackName.length() > 0) {
-                        var trackId = idStr;
+                        if (trackPlaylistId == null) {
+                            trackPlaylistId = "";
+                        }
 
-                        tracks.add(
-                            new JellyfinTrack(
-                                trackId,
-                                trackServerId,
-                                trackName,
-                                trackAlbum.length() > 0 ? trackAlbum : "Unknown Album",
-                                trackArtist.length() > 0 ? trackArtist : "Unknown Artist",
-                                trackDuration != null ? trackDuration : 0,
-                                trackSize != null ? trackSize : 0,
-                                trackPlaylistId
-                            )
-                        );
+                        if (trackServerId != null && trackServerId.length() > 0 &&
+                            trackName != null && trackName.length() > 0) {
+                            tracks.add(
+                                new JellyfinTrack(
+                                    idStr != null ? idStr : trackServerId,
+                                    trackServerId,
+                                    trackName,
+                                    (trackAlbum != null && trackAlbum.length() > 0) ? trackAlbum : "Unknown Album",
+                                    (trackArtist != null && trackArtist.length() > 0) ? trackArtist : "Unknown Artist",
+                                    trackDuration,
+                                    trackSize,
+                                    trackPlaylistId
+                                )
+                            );
+                        }
                     }
                 }
             }
-        }
         }
 
         return tracks;
@@ -787,34 +809,110 @@ class StorageManager {
     }
 
     function reconcileSyncedTracks(pendingTracks as Array, selectedPlaylistIds as Array) as Void {
+        if (pendingTracks.size() == 0) {
+            return;
+        }
+
         var syncedTracks = loadSyncedTracks();
         var selected = {};
         for (var i = 0; i < selectedPlaylistIds.size(); i++) {
-            selected[selectedPlaylistIds[i] as String] = true;
+            var pid = selectedPlaylistIds[i];
+            if (pid != null) {
+                selected[pid.toString()] = true;
+            }
         }
 
-        var pendingKeys = {};
+        var pendingById = {};
         for (var i = 0; i < pendingTracks.size(); i++) {
             var pt = pendingTracks[i] as Dictionary?;
             if (pt == null) { continue; }
-            var pid = pt["playlistId"] as String?;
             var tid = pt["id"] != null ? pt["id"].toString() : "";
-            if (pid != null && tid.length() > 0) {
-                pendingKeys[pid + "|" + tid] = true;
+            if (tid.length() > 0) {
+                pendingById[tid] = pt;
+            }
+            var sid = pt["serverId"] != null ? pt["serverId"].toString() : "";
+            if (sid.length() > 0) {
+                pendingById[sid] = pt;
             }
         }
 
         var keep = [];
         for (var i = 0; i < syncedTracks.size(); i++) {
-            var t = syncedTracks[i] as JellyfinTrack;
-            var keepTrack = true;
-            if (t.playlistId != null && selected[t.playlistId] != null) {
-                keepTrack = pendingKeys[t.playlistId + "|" + t.id.toString()] != null;
+            var item = syncedTracks[i];
+            if (item == null) { continue; }
+            var t = item instanceof JellyfinTrack ? item as JellyfinTrack : null;
+            if (t == null) {
+                if (item instanceof Dictionary) {
+                    var dict = item as Dictionary;
+                    t = new JellyfinTrack(
+                        dict["id"],
+                        dict["serverId"] != null ? dict["serverId"].toString() : "",
+                        dict["name"] != null ? dict["name"].toString() : "",
+                        dict["albumName"] != null ? dict["albumName"].toString() : "Unknown Album",
+                        dict["artistName"] != null ? dict["artistName"].toString() : "Unknown Artist",
+                        dict["durationSeconds"] != null ? (dict["durationSeconds"] as Number) : 0,
+                        dict["downloadSize"] != null ? (dict["downloadSize"] as Number) : 0,
+                        dict["playlistId"] != null ? dict["playlistId"].toString() : ""
+                    );
+                } else {
+                    continue;
+                }
             }
-            if (keepTrack) {
+
+            var tid = t.id != null ? t.id.toString() : "";
+            var sid = t.serverId != null ? t.serverId.toString() : "";
+            var pt = (tid.length() > 0 ? pendingById[tid] : null) as Dictionary?;
+            if (pt == null && sid.length() > 0) {
+                pt = pendingById[sid] as Dictionary?;
+            }
+
+            if (pt != null) {
+                // Canonical update from fresh Jellyfin pending tracks:
+                var pid = pt["playlistId"] as String?;
+                if (pid != null && pid.length() > 0) {
+                    t.playlistId = pid;
+                }
+                var name = pt["name"] as String?;
+                if (name != null && name.length() > 0) {
+                    t.name = sanitizeField(name);
+                }
+                var album = pt["albumName"] as String?;
+                if (album != null) {
+                    t.albumName = sanitizeField(album);
+                }
+                var artist = pt["artistName"] as String?;
+                if (artist != null) {
+                    t.artistName = sanitizeField(artist);
+                }
+                var dur = pt["durationSeconds"] as Number?;
+                if (dur != null && dur > 0) {
+                    t.durationSeconds = dur;
+                }
+                var sz = pt["downloadSize"] as Number?;
+                if (sz != null && sz > 0) {
+                    t.downloadSize = sz;
+                }
                 keep.add(t);
             } else {
-                Storage.deleteValue("tr_" + t.id.toString());
+                // Track was not in the pending batch from Jellyfin
+                var keepTrack = true;
+                if (t.playlistId != null && selected[t.playlistId] != null) {
+                    // It belonged to a playlist that was selected for this sync,
+                    // but is no longer present in that playlist on Jellyfin -> remove it
+                    keepTrack = false;
+                }
+                // If it belonged to a playlist that was NOT selected in this sync, keepTrack remains true!
+                // Its playlistId remains unchanged!
+                if (keepTrack) {
+                    keep.add(t);
+                } else {
+                    if (tid.length() > 0) {
+                        Storage.deleteValue("tr_" + tid);
+                    }
+                    if (sid.length() > 0 && !sid.equals(tid)) {
+                        Storage.deleteValue("tr_" + sid);
+                    }
+                }
             }
         }
 
@@ -870,35 +968,9 @@ class StorageManager {
         var parts = [];
         for (var i = 0; i < tracks.size(); i++) {
             var t = tracks[i];
-            var id = "";
-            var serverId = "";
-            var name = "";
-            var albumName = "";
-            var artistName = "";
-            var durationSeconds = 0;
-            var downloadSize = 0;
-            var playlistId = "";
-            if (t instanceof Dictionary) {
-                var dict = t as Dictionary;
-                id = dict["id"] as String?;
-                serverId = dict["serverId"] as String?;
-                name = dict["name"] as String?;
-                albumName = dict["albumName"] as String?;
-                artistName = dict["artistName"] as String?;
-                durationSeconds = dict["durationSeconds"] as Number?;
-                downloadSize = dict["downloadSize"] as Number?;
-                playlistId = dict["playlistId"] as String?;
+            if (t != null) {
+                parts.add(encodeTrack(t));
             }
-            parts.add(
-                id.toString() +
-                TRACK_DELIM + (serverId != null ? serverId : "") +
-                TRACK_DELIM + sanitizeField(name) +
-                TRACK_DELIM + sanitizeField(albumName) +
-                TRACK_DELIM + sanitizeField(artistName) +
-                TRACK_DELIM + durationSeconds.toString() +
-                TRACK_DELIM + downloadSize.toString() +
-                TRACK_DELIM + (playlistId != null ? playlistId : "")
-            );
         }
         var encoded = "";
         for (var i = 0; i < parts.size(); i++) {
@@ -919,40 +991,66 @@ class StorageManager {
             if (encoded.length() > 0) {
                 var records = ScaleHelper.splitString(encoded, RECORD_DELIM);
                 for (var i = 0; i < records.size(); i++) {
-                    var fields = ScaleHelper.splitString(records[i], TRACK_DELIM);
-                    if (fields.size() >= 8) {
+                    var rec = records[i];
+                    if (rec == null || rec.length() == 0) { continue; }
+                    var fields = ScaleHelper.splitString(rec, TRACK_DELIM);
+                    if (fields.size() >= 6) {
                         var idStr = fields[0];
                         var trackServerId = fields[1];
                         var trackName = fields[2];
-                        var trackAlbum = fields[3];
-                        var trackArtist = fields[4];
-                        var trackDuration = fields[fields.size() - 3].toNumber();
-                        var trackSize = fields[fields.size() - 2].toNumber();
-                        var trackPlaylistId = fields[fields.size() - 1];
+                        var trackAlbum = "Unknown Album";
+                        var trackArtist = "Unknown Artist";
+                        var trackDuration = 0;
+                        var trackSize = 0;
+                        var trackPlaylistId = "";
 
-                        if (fields.size() > 8) {
+                        if (fields.size() == 8) {
+                            trackAlbum = fields[3];
+                            trackArtist = fields[4];
+                            var dur = fields[5].toNumber();
+                            trackDuration = dur != null ? dur : 0;
+                            var sz = fields[6].toNumber();
+                            trackSize = sz != null ? sz : 0;
+                            trackPlaylistId = fields[7];
+                        } else if (fields.size() > 8) {
+                            var dur = fields[fields.size() - 3].toNumber();
+                            trackDuration = dur != null ? dur : 0;
+                            var sz = fields[fields.size() - 2].toNumber();
+                            trackSize = sz != null ? sz : 0;
+                            trackPlaylistId = fields[fields.size() - 1];
+                            trackAlbum = fields[fields.size() - 5];
+                            trackArtist = fields[fields.size() - 4];
                             trackName = "";
                             for (var f = 2; f <= fields.size() - 6; f++) {
                                 if (f > 2) { trackName = trackName + " "; }
                                 trackName = trackName + fields[f];
                             }
-                            trackAlbum = fields[fields.size() - 5];
-                            trackArtist = fields[fields.size() - 4];
+                        } else if (fields.size() == 7) {
+                            trackAlbum = fields[3];
+                            trackArtist = fields[4];
+                            var dur = fields[5].toNumber();
+                            trackDuration = dur != null ? dur : 0;
+                            var sz = fields[6].toNumber();
+                            trackSize = sz != null ? sz : 0;
+                        } else if (fields.size() == 6) {
+                            trackAlbum = fields[3];
+                            trackArtist = fields[4];
+                            var dur = fields[5].toNumber();
+                            trackDuration = dur != null ? dur : 0;
                         }
 
-                        if (trackPlaylistId != null && (trackPlaylistId.equals("0") || trackPlaylistId.length() < 4)) {
-                            var state = loadSyncState();
-                            if (state != null && state.selectedPlaylistIds.size() > 0) {
-                                trackPlaylistId = state.selectedPlaylistIds[0] as String;
-                            }
+                        if (trackPlaylistId == null) {
+                            trackPlaylistId = "";
                         }
-                        if (trackServerId.length() > 0 && trackName.length() > 0) {
+
+                        if (trackServerId != null && trackServerId.length() > 0 &&
+                            trackName != null && trackName.length() > 0) {
                             tracks.add({
-                                "id" => idStr,
+                                "id" => idStr != null ? idStr : trackServerId,
                                 "serverId" => trackServerId,
                                 "name" => trackName,
-                                "albumName" => trackAlbum,
-                                "artistName" => trackArtist,
+                                "albumName" => (trackAlbum != null && trackAlbum.length() > 0) ? trackAlbum : "Unknown Album",
+                                "artistName" => (trackArtist != null && trackArtist.length() > 0) ? trackArtist : "Unknown Artist",
                                 "durationSeconds" => trackDuration,
                                 "downloadSize" => trackSize,
                                 "playlistId" => trackPlaylistId
@@ -1000,35 +1098,55 @@ class StorageManager {
         var durationSeconds = 0;
         var downloadSize = 0;
         var playlistId = "";
+
         if (t instanceof Dictionary) {
             var dict = t as Dictionary;
-            id = dict["id"] as String?;
-            serverId = dict["serverId"] as String?;
-            name = dict["name"] as String?;
-            albumName = dict["albumName"] as String?;
-            artistName = dict["artistName"] as String?;
-            durationSeconds = dict["durationSeconds"] as Number?;
-            downloadSize = dict["downloadSize"] as Number?;
-            playlistId = dict["playlistId"] as String?;
+            var idVal = dict["id"];
+            id = idVal != null ? idVal.toString() : "";
+            var sVal = dict["serverId"];
+            serverId = sVal != null ? sVal.toString() : "";
+            var nVal = dict["name"];
+            name = nVal != null ? nVal.toString() : "";
+            var alVal = dict["albumName"];
+            albumName = alVal != null ? alVal.toString() : "";
+            var arVal = dict["artistName"];
+            artistName = arVal != null ? arVal.toString() : "";
+            var durVal = dict["durationSeconds"];
+            if (durVal instanceof Number) {
+                durationSeconds = durVal as Number;
+            } else if (durVal != null) {
+                var parsedDur = durVal.toString().toNumber();
+                durationSeconds = parsedDur != null ? parsedDur : 0;
+            }
+            var szVal = dict["downloadSize"];
+            if (szVal instanceof Number) {
+                downloadSize = szVal as Number;
+            } else if (szVal != null) {
+                var parsedSz = szVal.toString().toNumber();
+                downloadSize = parsedSz != null ? parsedSz : 0;
+            }
+            var pVal = dict["playlistId"];
+            playlistId = pVal != null ? pVal.toString() : "";
         } else if (t instanceof JellyfinTrack) {
             var jt = t as JellyfinTrack;
             id = jt.id != null ? jt.id.toString() : "";
-            serverId = jt.serverId;
-            name = jt.name;
-            albumName = jt.albumName;
-            artistName = jt.artistName;
-            durationSeconds = jt.durationSeconds;
-            downloadSize = jt.downloadSize;
-            playlistId = jt.playlistId;
+            serverId = jt.serverId != null ? jt.serverId : "";
+            name = jt.name != null ? jt.name : "";
+            albumName = jt.albumName != null ? jt.albumName : "";
+            artistName = jt.artistName != null ? jt.artistName : "";
+            durationSeconds = jt.durationSeconds != null ? jt.durationSeconds : 0;
+            downloadSize = jt.downloadSize != null ? jt.downloadSize : 0;
+            playlistId = jt.playlistId != null ? jt.playlistId : "";
         }
-        return id.toString() +
-            TRACK_DELIM + (serverId != null ? serverId : "") +
+
+        return id +
+            TRACK_DELIM + serverId +
             TRACK_DELIM + sanitizeField(name) +
             TRACK_DELIM + sanitizeField(albumName) +
             TRACK_DELIM + sanitizeField(artistName) +
             TRACK_DELIM + durationSeconds.toString() +
             TRACK_DELIM + downloadSize.toString() +
-            TRACK_DELIM + (playlistId != null ? playlistId : "");
+            TRACK_DELIM + playlistId;
     }
 
     function clearPendingPlaylistResponse() as Void {

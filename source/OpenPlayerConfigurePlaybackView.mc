@@ -85,52 +85,106 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
                 }
             }
         }
-        var unique = [];
-        var seenIds = [];
-        
-        var hasTrackChanges = false;
-        for (var i = 0; i < _tracks.size(); i++) {
-            var track = _tracks[i] as JellyfinTrack;
-            var pid = track.playlistId;
-            if (pid != null && (pid.equals("0") || pid.length() < 4)) {
-                if (savedPlaylists.size() > 0) {
-                    var sp0 = savedPlaylists[0] as JellyfinPlaylist;
-                    pid = sp0.id;
-                    track.playlistId = pid;
-                    hasTrackChanges = true;
+
+        // Build name lookup map for all known playlists
+        var playlistNameById = {};
+        for (var k = 0; k < savedPlaylists.size(); k++) {
+            var sp = savedPlaylists[k] as JellyfinPlaylist;
+            if (sp.id != null && sp.id.length() > 0 && sp.name != null && sp.name.length() > 0) {
+                playlistNameById[sp.id] = sp.name;
+            }
+        }
+        var pIds = storage.getPendingPlaylistIds();
+        var pNames = storage.getPendingPlaylistNames();
+        if (pIds != null && pNames != null) {
+            var idParts = ScaleHelper.splitString(pIds, ",");
+            var nameParts = ScaleHelper.splitString(pNames, "|");
+            var minP = idParts.size() < nameParts.size() ? idParts.size() : nameParts.size();
+            for (var p = 0; p < minP; p++) {
+                var pid = idParts[p] as String;
+                if (playlistNameById[pid] == null) {
+                    playlistNameById[pid] = nameParts[p] as String;
                 }
             }
-            if (pid != null && pid.length() > 0) {
-                var alreadySeen = false;
-                for (var j = 0; j < seenIds.size(); j++) {
-                    if ((seenIds[j] as String).equals(pid)) {
-                        alreadySeen = true;
-                        break;
-                    }
+        }
+
+        // Collect all distinct playlist IDs that have downloaded tracks
+        var uniqueIds = [];
+        var seenIds = {};
+        for (var i = 0; i < _tracks.size(); i++) {
+            var item = _tracks[i];
+            var pid = null as String?;
+            if (item instanceof JellyfinTrack) {
+                pid = (item as JellyfinTrack).playlistId;
+            } else if (item instanceof Dictionary) {
+                pid = (item as Dictionary)["playlistId"] as String?;
+            }
+            if (pid != null && pid.length() > 0 && !pid.equals("0")) {
+                if (seenIds[pid] == null) {
+                    seenIds[pid] = true;
+                    uniqueIds.add(pid);
                 }
-                if (!alreadySeen) {
-                    seenIds.add(pid);
-                    var playlistName = "Playlist";
-                    if (pid.length() >= 8) {
-                        playlistName = "P-" + pid.substring(0, 8);
-                    }
-                    for (var k = 0; k < savedPlaylists.size(); k++) {
-                        var sp = savedPlaylists[k] as JellyfinPlaylist;
-                        if (sp.id.equals(pid)) {
-                            playlistName = sp.name;
-                            break;
+            }
+        }
+
+        // If there are tracks with missing/empty/zero playlistId, heal them if fallback is known
+        var hasOrphanChanges = false;
+        if (_tracks.size() > 0) {
+            var fallbackId = null;
+            if (uniqueIds.size() == 1) {
+                fallbackId = uniqueIds[0] as String;
+            } else if (uniqueIds.size() == 0) {
+                var syncState = storage.loadSyncState();
+                if (syncState.selectedPlaylistIds.size() == 1) {
+                    fallbackId = syncState.selectedPlaylistIds[0] as String;
+                } else if (savedPlaylists.size() == 1) {
+                    fallbackId = (savedPlaylists[0] as JellyfinPlaylist).id;
+                }
+            }
+
+            if (fallbackId != null) {
+                for (var i = 0; i < _tracks.size(); i++) {
+                    var item = _tracks[i];
+                    if (item instanceof JellyfinTrack) {
+                        var track = item as JellyfinTrack;
+                        if (track.playlistId == null || track.playlistId.length() == 0 || track.playlistId.equals("0")) {
+                            track.playlistId = fallbackId;
+                            hasOrphanChanges = true;
+                        }
+                    } else if (item instanceof Dictionary) {
+                        var dict = item as Dictionary;
+                        var pVal = dict["playlistId"] as String?;
+                        if (pVal == null || pVal.length() == 0 || pVal.equals("0")) {
+                            dict["playlistId"] = fallbackId;
+                            hasOrphanChanges = true;
                         }
                     }
-                    unique.add({
-                        "id" => pid,
-                        "name" => playlistName
-                    });
+                }
+                if (seenIds[fallbackId] == null) {
+                    seenIds[fallbackId] = true;
+                    uniqueIds.add(fallbackId);
                 }
             }
         }
-        if (hasTrackChanges) {
+
+        if (hasOrphanChanges) {
             storage.saveSyncedTracks(_tracks);
         }
+
+        // Build _playlists containing EVERY playlist that has tracks
+        var unique = [];
+        for (var u = 0; u < uniqueIds.size(); u++) {
+            var uid = uniqueIds[u] as String;
+            var name = playlistNameById[uid] as String?;
+            if (name == null || name.length() == 0) {
+                name = getApp().isPodcastMode() ? "Podcasts" : "Playlist";
+            }
+            unique.add({
+                "id" => uid,
+                "name" => name
+            });
+        }
+
         _playlists = unique;
 
         if (_playlists.size() > 0 && _selectedIndex >= _playlists.size()) {
@@ -228,9 +282,15 @@ class OpenPlayerConfigurePlaybackView extends WatchUi.View {
 
         var filteredTracks = [];
         for (var i = 0; i < _tracks.size(); i++) {
-            var track = _tracks[i] as JellyfinTrack;
-            if (playlistId == null || (track.playlistId != null && track.playlistId.equals(playlistId))) {
-                filteredTracks.add(track);
+            var item = _tracks[i];
+            var tPid = null as String?;
+            if (item instanceof JellyfinTrack) {
+                tPid = (item as JellyfinTrack).playlistId;
+            } else if (item instanceof Dictionary) {
+                tPid = (item as Dictionary)["playlistId"] as String?;
+            }
+            if (playlistId == null || (tPid != null && tPid.equals(playlistId))) {
+                filteredTracks.add(item);
             }
         }
 
