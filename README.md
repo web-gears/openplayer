@@ -24,10 +24,49 @@ A music and podcast player for Garmin smartwatch, syncing with Jellyfin media se
 
 ## Requirements
 - Garmin Fenix 5+ (or compatible Connect IQ device starting API level 3.1 with music and WiFi support)
-- Jellyfin server accessible from the watch. Both `https://` and `http://` URLs are accepted.
+- Jellyfin server accessible over HTTPS with a valid SSL/TLS certificate (see [Server URL & HTTPS Requirements](#server-url--https-requirements))
 - Jellyfin user account credentials
 
-**Note about HTTP vs HTTPS:** Garmin watches cannot be forced to allow plain HTTP when the request is relayed through the phone (Garmin Connect Mobile): on Android, cleartext connections to LAN/private addresses are blocked (only `127.0.0.1` is exempt), while iOS typically allows HTTP to raw IP addresses. Plain HTTP to a LAN server generally works when the watch connects directly over WiFi. You can enter `http://` in the server URL; HTTPS remains the reliable option on real hardware.
+## Server URL & HTTPS Requirements
+
+OpenPlayer connects to your Jellyfin server to authenticate, retrieve playlists, and download audio tracks. **Your Jellyfin server should be exposed via HTTPS with a valid SSL/TLS certificate.**
+
+### Why HTTPS is Required
+
+While the app accepts both `http://` and `https://` URLs, **plain HTTP (`http://`) is unreliable on real hardware** due to how Garmin watches handle networking:
+
+1. **Garmin Connect Mobile (phone relay) blocks cleartext HTTP:**
+   - When the watch is paired with your phone via Bluetooth, network requests are relayed through the Garmin Connect Mobile (GCM) companion app.
+   - On **Android (Android 9+)**, cleartext (`http://`) network traffic to private LAN or external IP addresses is strictly blocked by default OS security policies (only `127.0.0.1` is exempt). Any request routed through your phone to `http://192.168.x.x` will fail immediately.
+   - On **iOS**, Apple's App Transport Security (ATS) enforces TLS/HTTPS for network connections.
+2. **Watch Wi-Fi aggressively sleeps:**
+   - Garmin watches put their Wi-Fi radio to sleep within seconds of inactivity to conserve battery life. Connect IQ apps cannot programmatically wake the Wi-Fi chip.
+   - When Wi-Fi is sleeping, the watch automatically falls back to the Bluetooth phone relay. If your server is only accessible via plain HTTP on your local network, setup, authentication, and playlist sync will fail or time out.
+3. **Valid SSL/TLS certificate required:**
+   - The HTTPS connection must use a certificate issued by a recognized Certificate Authority (such as [Let's Encrypt](https://letsencrypt.org/)).
+   - Self-signed certificates without an installed root CA will fail TLS handshake verification on both the watch and phone.
+
+> **Tip:** If your Jellyfin instance runs at home, expose it securely via a reverse proxy (e.g. [Caddy](https://caddyserver.com/), [Nginx Proxy Manager](https://nginxproxymanager.com/), [Traefik](https://traefik.io/)), [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), or [Tailscale with HTTPS](https://tailscale.com/kb/1153/enabling-https).
+
+### Examples of Working URLs
+
+Enter your full URL including the `https://` scheme:
+
+| URL Type | Example | Description |
+|---|---|---|
+| **Standard HTTPS Domain** | `https://jellyfin.example.com` | **Recommended.** Reverse proxy on standard HTTPS port 443 with a valid certificate. |
+| **HTTPS with Custom Port** | `https://jellyfin.example.com:8920` | Jellyfin native HTTPS port or custom forwarded port with a valid certificate. |
+| **HTTPS with Subpath** | `https://example.com/jellyfin` | Jellyfin hosted behind a reverse proxy subpath / base URL. |
+| **Dynamic DNS (DDNS)** | `https://yourname.duckdns.org` | Dynamic DNS service paired with a Let's Encrypt certificate. |
+| **Tailscale / Mesh VPN** | `https://jellyfin.your-tailnet.ts.net` | Tailscale Funnel or MagicDNS with HTTPS certificates enabled. |
+
+### Examples of URLs that Fail or Have Issues
+
+| Problematic URL | Issue / Why It Fails |
+|---|---|
+| `http://192.168.1.50:8096` | Plain HTTP. Blocked by Android/iOS cleartext security policies when relayed through the phone; only works if the watch's Wi-Fi is actively awake. |
+| `http://jellyfin.local:8096` | Plain HTTP, and `.local` mDNS hostnames are not resolved by Garmin Connect Mobile. |
+| `https://192.168.1.50:8920` *(self-signed)* | Untrusted SSL/TLS certificate fails handshake verification on Garmin watches and phones. |
 
 ## Getting Started
 
@@ -39,9 +78,9 @@ Install OpenPlayer from the [Garmin Connect IQ Store](https://apps.garmin.com/ap
 
 Open OpenPlayer on your watch. On first launch you'll see a connect prompt. Press **ENTER** to proceed to the setup screen.
 
-**Garmin Connect Mobile (recommended):** Enter your server URL (e.g. `https://jellyfin.example.com` or `http://192.168.1.50:8096`), username, and password in the Garmin Connect Mobile app under **Device > Apps > OpenPlayer > Settings**. On the watch, press ENTER to connect once the fields are filled.
+**Garmin Connect Mobile (recommended):** Enter your server URL (e.g. `https://jellyfin.example.com`), username, and password in the Garmin Connect Mobile app under **Device > Apps > OpenPlayer > Settings**. On the watch, press ENTER to connect once the fields are filled.
 
-**QR code:** From the setup screen, press **UP** to switch to the QR code flow. A QR code is displayed on the watch. Scan it with your phone to open a secure form where you enter your Jellyfin server URL (scheme is preserved, e.g. `http://192.168.1.50:8096`), username, and password. The credentials are transmitted to the watch and saved.
+**QR code:** From the setup screen, press **UP** to switch to the QR code flow. A QR code is displayed on the watch. Scan it with your phone to open a secure form where you enter your Jellyfin server URL (e.g. `https://jellyfin.example.com`), username, and password. The credentials are transmitted to the watch and saved.
 
 After entering credentials, the watch displays a review screen showing your server URL and username. Press ENTER to save.
 
@@ -51,7 +90,7 @@ After setup you'll see a list of playlists from your Jellyfin server. Use UP/DOW
 
 If the sync preview shows **0 new tracks** (everything is already up to date), pressing ENTER finishes the sync locally without connecting over Wi-Fi or starting a background download.
 
-**Network requirement for syncing:** fetching and downloading tracks requires a network connection on the watch — either its own Wi-Fi or a paired phone. If the watch has **no Wi-Fi and no phone connection** at all, syncing stops immediately with the message **"WiFi isn't connected. Open Settings -> WiFi"** instead of hanging on a timed-out request. When your Jellyfin server is reachable only over your home network (e.g. `http://192.168.1.50:8096`), wake the watch's Wi-Fi first (e.g. prompt it via **Settings → Wi-Fi** or a built-in weather/music sync) and start syncing right away — Garmin watches put Wi-Fi to sleep to save battery and CIQ apps cannot wake it themselves.
+**Network requirement for syncing:** fetching and downloading tracks requires a network connection on the watch — either its own Wi-Fi or a paired phone. If the watch has **no Wi-Fi and no phone connection** at all, syncing stops immediately with the message **"WiFi isn't connected. Open Settings -> WiFi"** instead of hanging on a timed-out request. When your Jellyfin server is reachable only over your home network (e.g. an internal address), wake the watch's Wi-Fi first (e.g. prompt it via **Settings → Wi-Fi** or a built-in weather/music sync) and start syncing right away — Garmin watches put Wi-Fi to sleep to save battery and CIQ apps cannot wake it themselves. Exposing your server via HTTPS with a domain name avoids this restriction, allowing syncing to relay seamlessly through your phone.
 
 Syncing works in two modes:
 - **Selected playlists** are fully synced to **mirror the server**: new tracks are downloaded and tracks that were removed from the playlist on the server are dropped from your synced track list.
