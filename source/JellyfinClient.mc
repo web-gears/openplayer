@@ -202,17 +202,19 @@ class JellyfinClient {
             return;
         }
 
-        var url = buildUrl(server, "/Items");
-        var params = {
-            "IncludeItemTypes" => "Playlist",
-            "Recursive" => "true",
-            "StartIndex" => _playlistStartIndex.toString(),
-            "Limit" => PLAYLIST_PAGE_SIZE.toString(),
-        };
+        var url = buildUrl(server, "/Items") +
+            "?IncludeItemTypes=Playlist&Recursive=true&StartIndex=" +
+            _playlistStartIndex.toString() +
+            "&Limit=" + PLAYLIST_PAGE_SIZE.toString();
+
+        var userId = _storage.getUserId();
+        if (userId != null && userId.length() > 0) {
+            url = url + "&UserId=" + userId;
+        }
 
         Communications.makeWebRequest(
             url,
-            params,
+            null,
             {
                 :method => Communications.HTTP_REQUEST_METHOD_GET,
                 :headers => {
