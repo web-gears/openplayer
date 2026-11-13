@@ -1,6 +1,7 @@
 import Toybox.WatchUi;
 import Toybox.Lang;
 import Toybox.Media;
+import ScaleHelper;
 
 class OpenPlayerConfigurePlaybackDelegate extends WatchUi.BehaviorDelegate {
     private var _storage as StorageManager;
@@ -406,6 +407,10 @@ class PlaybackActionMenuDelegate extends WatchUi.ActionMenuDelegate {
             var syncState = storage.loadSyncState();
             if (syncState.selectedPlaylistIds == null || syncState.selectedPlaylistIds.size() == 0) {
                 WatchUi.showToast("Select playlists first", null);
+                return;
+            }
+            if (!ScaleHelper.isSyncTransportConfigured()) {
+                WatchUi.showToast("Configure Wi-Fi first", null);
                 return;
             }
             Communications.startSync();

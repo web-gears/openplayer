@@ -5,26 +5,26 @@ import ScaleHelper;
 
 class AboutView extends WatchUi.View {
     private var _title as String = "OpenPlayer";
-    private var _version as String = "2.0.40";
-    private static var _qrCodeBitmap as Graphics.BitmapReference?;
+    private var _version as String = "2.0.41";
+    private var _qrCodeBitmap as Graphics.BitmapType?;
 
 
     private var _cachedLabelSupportDev as String?;
     private var _cachedHintBack as String?;
 
     function initialize() {
-        if (_qrCodeBitmap == null) {
-            _qrCodeBitmap = WatchUi.loadResource($.Rez.Drawables.CoffeeQrCode) as Graphics.BitmapReference?;
-        }
+        View.initialize();
         _cachedLabelSupportDev = WatchUi.loadResource($.Rez.Strings.labelSupportDev) as String;
         _cachedHintBack = WatchUi.loadResource($.Rez.Strings.hintBack) as String;
-        View.initialize();
     }
 
     function onLayout(dc as Dc) as Void {
     }
 
     function onShow() as Void {
+        if (_qrCodeBitmap == null) {
+            _qrCodeBitmap = WatchUi.loadResource($.Rez.Drawables.CoffeeQrCode) as Graphics.BitmapType?;
+        }
     }
 
     function onUpdate(dc as Dc) as Void {
@@ -75,34 +75,11 @@ class AboutView extends WatchUi.View {
 
         var qrSize = ScaleHelper.scale(dc, 76);
         var qrY = ScaleHelper.topSafe(dc, 80, 90);
+        if (_qrCodeBitmap == null) {
+            _qrCodeBitmap = WatchUi.loadResource($.Rez.Drawables.CoffeeQrCode) as Graphics.BitmapType?;
+        }
         if (_qrCodeBitmap != null) {
-            if (Graphics has :AffineTransform && dc has :drawBitmap2) {
-                var origW = _qrCodeBitmap.getWidth().toFloat();
-                var origH = _qrCodeBitmap.getHeight().toFloat();
-                var targetW = qrSize.toFloat(); 
-                var targetH = qrSize.toFloat();
-
-                var scaleFactorX = targetW / origW;
-                var scaleFactorY = targetH / origH;
-
-                var transform = new Graphics.AffineTransform();
-                transform.scale(scaleFactorX, scaleFactorY);
-
-                var bitmapOptions = {
-                    :bitmapX => 0,
-                    :bitmapY => 0,
-                    :transform => transform
-                };
-
-                dc.drawBitmap2(
-                    dc.getWidth() / 2 - (qrSize / 2), 
-                    qrY, 
-                    _qrCodeBitmap, 
-                    bitmapOptions
-                );
-            } else {
-                dc.drawBitmap(dc.getWidth() / 2 - (_qrCodeBitmap.getWidth() / 2), qrY, _qrCodeBitmap);
-            }
+            ScaleHelper.drawCenteredScaledBitmap(dc, _qrCodeBitmap, qrSize, qrSize, qrY);
         }
 
         dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
@@ -128,5 +105,6 @@ class AboutView extends WatchUi.View {
     }
 
     function onHide() as Void {
+        _qrCodeBitmap = null;
     }
 }

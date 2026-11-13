@@ -18,7 +18,7 @@ class SettingsWizardView extends WatchUi.View {
     private var _password as String = "";
     private var _serverUrl as String = "";
 
-    private static var _qrCodeBitmap as Graphics.BitmapReference?;
+    private var _qrCodeBitmap as Graphics.BitmapType?;
 
     private static const STEP_CHOICE = 10;
     private static const STEP_QR_LOADING = 11;
@@ -31,9 +31,6 @@ class SettingsWizardView extends WatchUi.View {
     function initialize() {
         View.initialize();
         _step = STEP_CHOICE;
-        if (_qrCodeBitmap == null) {
-            _qrCodeBitmap = WatchUi.loadResource($.Rez.Drawables.DisposableFormQrCode) as Graphics.BitmapReference?;
-        }
         updateStep();
     }
 
@@ -43,6 +40,9 @@ class SettingsWizardView extends WatchUi.View {
     function onShow() as Void {
         if (WatchUi.View has :setActionMenuIndicator) {
             setActionMenuIndicator({:enabled => true});
+        }
+        if (_qrCodeBitmap == null) {
+            _qrCodeBitmap = WatchUi.loadResource($.Rez.Drawables.DisposableFormQrCode) as Graphics.BitmapType?;
         }
     }
 
@@ -84,35 +84,13 @@ class SettingsWizardView extends WatchUi.View {
             dc.drawText(dc.getWidth() / 2, dc.getHeight() / 2, Graphics.FONT_MEDIUM, WatchUi.loadResource($.Rez.Strings.wizardQrLoading) as String, Graphics.TEXT_JUSTIFY_CENTER);
         } else if (_step == STEP_QR_DISPLAY) {
             var qrY = ScaleHelper.topSafe(dc, 68, 78);
+            if (_qrCodeBitmap == null) {
+                _qrCodeBitmap = WatchUi.loadResource($.Rez.Drawables.DisposableFormQrCode) as Graphics.BitmapType?;
+            }
             if (_qrCodeBitmap != null) {
-                if (Graphics has :AffineTransform && dc has :drawBitmap2) {
-                    var origW = _qrCodeBitmap.getWidth().toFloat();
-                    var origH = _qrCodeBitmap.getHeight().toFloat();
-
-                    var targetW = ScaleHelper.scale(dc, _qrCodeBitmap.getWidth()).toFloat(); 
-                    var targetH = ScaleHelper.scale(dc, _qrCodeBitmap.getHeight()).toFloat();
-
-                    var scaleFactorX = targetW / origW;
-                    var scaleFactorY = targetH / origH;
-
-                    var transform = new Graphics.AffineTransform();
-                    transform.scale(scaleFactorX, scaleFactorY);
-
-                    var bitmapOptions = {
-                        :bitmapX => 0,
-                        :bitmapY => 0,
-                        :transform => transform
-                    };
-
-                    dc.drawBitmap2(
-                        dc.getWidth() / 2 - ScaleHelper.scale(dc, 47), 
-                        qrY, 
-                        _qrCodeBitmap, 
-                        bitmapOptions
-                    );
-                } else {
-                    dc.drawBitmap(dc.getWidth() / 2 - 47, qrY, _qrCodeBitmap);
-                }
+                var targetW = ScaleHelper.scale(dc, _qrCodeBitmap.getWidth());
+                var targetH = ScaleHelper.scale(dc, _qrCodeBitmap.getHeight());
+                ScaleHelper.drawCenteredScaledBitmap(dc, _qrCodeBitmap, targetW, targetH, qrY);
 
                 dc.drawText(dc.getWidth() / 2,  ScaleHelper.bottomSafe(dc, 45, 60), Graphics.FONT_MEDIUM, formatSessionId(), Graphics.TEXT_JUSTIFY_CENTER);
             } else {
@@ -199,6 +177,7 @@ class SettingsWizardView extends WatchUi.View {
     }
 
     function onHide() as Void {
+        _qrCodeBitmap = null;
     }
 
     function setStep(step as Number) as Void {

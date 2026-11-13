@@ -126,4 +126,82 @@ module ScaleHelper {
 
         return lines;
     }
+
+    //! Draws a bitmap scaled to targetW x targetH centered horizontally at y.
+    //! Copies paletted bitmap resources onto a native-format BufferedBitmap
+    //! before drawBitmap2 so CIQ 4.2+/5.x GPU devices do not throw palette errors.
+    function drawCenteredScaledBitmap(
+        dc,
+        bitmap as Graphics.BitmapType,
+        targetW as Number,
+        targetH as Number,
+        y as Number
+    ) as Void {
+        var origW = bitmap.getWidth();
+        var origH = bitmap.getHeight();
+        if (origW <= 0 || origH <= 0) {
+            return;
+        }
+        var centerX = dc.getWidth() / 2;
+        if (Graphics has :AffineTransform && dc has :drawBitmap2) {
+            var sourceBitmap = bitmap;
+            try {
+                if (Graphics has :createBufferedBitmap) {
+                    var bufRef = Graphics.createBufferedBitmap({
+                        :width => origW,
+                        :height => origH
+                    });
+                    var buf = bufRef.get() as Graphics.BufferedBitmap?;
+                    if (buf != null) {
+                        var bufDc = buf.getDc();
+                        bufDc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_WHITE);
+                        bufDc.clear();
+                        bufDc.drawBitmap(0, 0, bitmap);
+                        sourceBitmap = buf;
+                    }
+                }
+                var transform = new Graphics.AffineTransform();
+                transform.scale(targetW.toFloat() / origW.toFloat(), targetH.toFloat() / origH.toFloat());
+                dc.drawBitmap2(
+                    centerX - (targetW / 2),
+                    y,
+                    sourceBitmap,
+                    {
+                        :bitmapX => 0,
+                        :bitmapY => 0,
+                        :bitmapWidth => origW,
+                        :bitmapHeight => origH,
+                        :transform => transform
+                    }
+                );
+                return;
+            } catch (ex) {
+                // Fall back to unscaled drawBitmap if device rejects transform or buffer
+            }
+        }
+        dc.drawBitmap(centerX - (origW / 2), y, bitmap);
+    }
+
+    //! Returns false when device exposes Wi-Fi connectionInfo and Wi-Fi is NOT_INITIALIZED
+    //! (no network configured on watch) and no LTE fallback is configured.
+    //! Allows CONNECTION_STATE_NOT_CONNECTED because Garmin activates sleeping Wi-Fi during startSync().
+    function isSyncTransportConfigured() as Boolean {
+        var settings = System.getDeviceSettings();
+        if (!(settings has :connectionInfo)) {
+            return true;
+        }
+        var info = settings.connectionInfo;
+        var wifi = info[:wifi];
+        if (wifi == null) {
+            return true;
+        }
+        if (wifi.state != System.CONNECTION_STATE_NOT_INITIALIZED) {
+            return true;
+        }
+        var lte = info[:lte];
+        if (lte != null && lte.state != System.CONNECTION_STATE_NOT_INITIALIZED) {
+            return true;
+        }
+        return false;
+    }
 }

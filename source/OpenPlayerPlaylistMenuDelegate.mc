@@ -1,6 +1,7 @@
 import Toybox.WatchUi;
 import Toybox.Lang;
 import Toybox.Communications;
+import ScaleHelper;
 
 class OpenPlayerPlaylistMenuDelegate extends WatchUi.Menu2InputDelegate {
     private var _storage as StorageManager;
@@ -60,6 +61,10 @@ class OpenPlayerPlaylistMenuDelegate extends WatchUi.Menu2InputDelegate {
         var syncState = _storage.loadSyncState();
         if (syncState.selectedPlaylistIds.size() == 0) {
             WatchUi.showToast("No playlists queued", null);
+            return;
+        }
+        if (!ScaleHelper.isSyncTransportConfigured()) {
+            WatchUi.showToast("Configure Wi-Fi first", null);
             return;
         }
         Communications.startSync();

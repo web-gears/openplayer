@@ -1044,9 +1044,24 @@ class OpenPlayerSyncStatusView extends WatchUi.View {
 
         dc.drawText(
             dc.getWidth() / 2,
-            dc.getHeight() / 2,
+            dc.getHeight() / 2 - ScaleHelper.scale(dc, 12),
             Graphics.FONT_TINY,
-            "Syncing...",
+            "Connecting Wi-Fi...",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.setColor(Graphics.COLOR_LT_GRAY, Graphics.COLOR_BLACK);
+        dc.drawText(
+            dc.getWidth() / 2,
+            dc.getHeight() / 2 + ScaleHelper.scale(dc, 14),
+            Graphics.FONT_XTINY,
+            "Watch Wi-Fi needed",
+            Graphics.TEXT_JUSTIFY_CENTER
+        );
+        dc.drawText(
+            dc.getWidth() / 2,
+            ScaleHelper.bottomSafe(dc, 22, 34),
+            Graphics.FONT_XTINY,
+            "ESC: Cancel",
             Graphics.TEXT_JUSTIFY_CENTER
         );
     }
@@ -1087,6 +1102,14 @@ class OpenPlayerSyncStatusDelegate extends WatchUi.BehaviorDelegate {
                     _storage.clearSyncProgress();
                     WatchUi.popView(WatchUi.SLIDE_IMMEDIATE);
                     WatchUi.showToast("All tracks up to date", null);
+                    return true;
+                }
+                if (!ScaleHelper.isSyncTransportConfigured()) {
+                    _storage.saveSyncProgressDict({
+                        "phase" => "fetch_failed",
+                        "fetchError" => "Wi-Fi not configured"
+                    });
+                    WatchUi.requestUpdate();
                     return true;
                 }
                 _storage.saveSyncProgressDict({
